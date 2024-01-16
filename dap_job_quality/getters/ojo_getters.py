@@ -94,7 +94,11 @@ def get_ojo_skills_sample() -> pd.DataFrame:
     """Gets ojo sample data with skills information from s3
 
     Returns:
-        pd.Dataframe: ojo sample data
+        pd.Dataframe: ojo sample data with the fields:
+            - id: unique identifier for the job ad from which the skill was extracted
+            - skill_label: the skill as extracted by our skills extractor eg "Advanced IT skills"
+            - esco_label: the skill from the ESCO taxonomy that the skill maps to eg "using digital tools for collaboration and productivity"
+            - esco_id: identifier for the ESCO skill in the ESCO taxonomy eg S5.6.1
     """
     return load_s3_data(
         PRINZ_BUCKET_NAME,
