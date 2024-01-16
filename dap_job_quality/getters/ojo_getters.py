@@ -16,12 +16,12 @@ def get_ojo_sample() -> pd.DataFrame:
 
     Returns:
         pd.Dataframe: ojo sample data with the fields:
-            - `id`: unique identifier for the job ad
-            - `job_title_raw`
-            - `created`: datetime when the job was listed?
-            - `description`: job description
-            - `itl_3_code`
-            - `itl_3_name`
+            - id: unique identifier for the job ad
+            - job_title_raw: job title as listed in the dataset
+            - created: datetime when the job was listed
+            - description: job description
+            - itl_3_code: ITL 3 code for the location of the job
+            - itl_3_name: ITL 3 name for the location of the job
     """
     return load_s3_data(
         PRINZ_BUCKET_NAME,
@@ -30,18 +30,19 @@ def get_ojo_sample() -> pd.DataFrame:
 
 
 def get_ojo_job_title_sample() -> pd.DataFrame:
-    """Gets ojo sample data with job title and sectors information from s3
+    """Gets ojo sample data (100,000 job ads) with
+        job title and sectors information from s3.
 
     Returns:
         pd.Dataframe: ojo sample data with the following fields:
             - id: unique identifier for the job ad
             - company_raw: company name
-            - job_title_raw
-            - job_location_raw
-            - created: datetime when the job was listed?
+            - job_title_raw: job title as originally listed
+            - job_location_raw: location of the job as originally listed
+            - created: datetime when the job was listed in the dataset
             - type: who listed the ad (e.g. "Recruitement consultancy", "Direct employer")
-            - sector
-            - parent_sector
+            - sector: dataset specific sector eg "Accountancy (Qualified)"
+            - parent_sector: dataset specific parent sector eg "Accountancy"
             - knowledge_domain: eg "Engineering", "Legal"
             - occupation: standardised job title eg "Manager consultant"
     """
@@ -52,22 +53,23 @@ def get_ojo_job_title_sample() -> pd.DataFrame:
 
 
 def get_ojo_location_sample() -> pd.DataFrame:
-    """Gets ojo sample data with location information from s3
+    """Gets ojo sample data (100,000 job ads) with
+        processed location information from s3.
 
     Returns:
         pd.Dataframe: ojo sample data with the fields:
             - id: unique identifier of the job ad
-            - job_location_raw
+            - job_location_raw: location of the job as originally listed
             - itl_1_code: eg "TLJ"
             - itl_1_name: eg "South East (England)
-            - itl_2_code
-            - itl_2_name
-            - itl_3_code
-            - itl_3_name
+            - itl_2_code: eg "TLJ1"
+            - itl_2_name: eg "Berkshire, Buckinghamshire and Oxfordshire"
+            - itl_3_code: eg "TLJ11"
+            - itl_3_name: eg "Buckinghamshire"
             - is_uk: 1.0 if true, 0.0 if false
-            - is_large_geo: 1.0 if true, 0.0 if false (what does this mean?)
+            - is_large_geo: 1.0 if true, 0.0 if false
             - location: standardised from job_location_raw
-            - coordinates
+            - coordinates: coordinates of the location
     """
     return load_s3_data(
         PRINZ_BUCKET_NAME,
@@ -76,13 +78,14 @@ def get_ojo_location_sample() -> pd.DataFrame:
 
 
 def get_ojo_salaries_sample() -> pd.DataFrame:
-    """Gets ojo sample data with salaries information from s3
+    """Gets ojo sample data (100,000 job ads) with
+        processed salaries information from s3.
 
     Returns:
         pd.Dataframe: ojo sample data with the fields:
             - id: unique identifier of the job ad
-            - min_annualised_salary
-            - max_annualised_salary
+            - min_annualised_salary: minimum annualised salary
+            - max_annualised_salary: maximum annualised salary
     """
     return load_s3_data(
         PRINZ_BUCKET_NAME,
@@ -91,14 +94,18 @@ def get_ojo_salaries_sample() -> pd.DataFrame:
 
 
 def get_ojo_skills_sample() -> pd.DataFrame:
-    """Gets ojo sample data with skills information from s3
+    """Gets ojo sample data (100,000 job ads) with
+        skills information from s3.
 
     Returns:
         pd.Dataframe: ojo sample data with the fields:
             - id: unique identifier for the job ad from which the skill was extracted
-            - skill_label: the skill as extracted by our skills extractor eg "Advanced IT skills"
-            - esco_label: the skill from the ESCO taxonomy that the skill maps to eg "using digital tools for collaboration and productivity"
-            - esco_id: identifier for the ESCO skill in the ESCO taxonomy eg S5.6.1
+            - skill_label: the skill as extracted by our skills extractor
+                eg "Advanced IT skills"
+            - esco_label: the skill from the ESCO taxonomy that the skill
+                maps to eg "using digital tools for collaboration and productivity"
+            - esco_id: identifier for the ESCO skill in the ESCO taxonomy
+                eg S5.6.1
     """
     return load_s3_data(
         PRINZ_BUCKET_NAME,
