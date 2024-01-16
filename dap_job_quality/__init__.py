@@ -7,6 +7,7 @@ from typing import Optional
 import yaml
 
 BUCKET_NAME = "open-jobs-lake"
+PRINZ_BUCKET_NAME = "prinz-green-jobs"
 
 
 def get_yaml_config(file_path: Path) -> Optional[dict]:

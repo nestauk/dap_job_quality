@@ -1,0 +1,6 @@
+pandas
+boto3
+pyarrow
+fsspec
+s3fs==2023.12.2
+sentence-transformers
