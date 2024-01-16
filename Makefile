@@ -53,7 +53,7 @@ docs-open:
 .PHONY: conda-update
 ## Update the conda-environment based on changes to `environment.yaml`
 conda-update:
-	conda env update -n ${REPO_NAME} -f environment.yaml
+	conda env update -n ${REPO_NAME} -f environment.yaml python=3.10
 	$(MAKE) -s pip-install
 	direnv reload
 
