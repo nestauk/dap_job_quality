@@ -33,7 +33,17 @@ def get_ojo_job_title_sample() -> pd.DataFrame:
     """Gets ojo sample data with job title and sectors information from s3
 
     Returns:
-        pd.Dataframe: ojo sample data
+        pd.Dataframe: ojo sample data with the following fields:
+            - id: unique identifier for the job ad
+            - company_raw: company name
+            - job_title_raw
+            - job_location_raw
+            - created: datetime when the job was listed?
+            - type: who listed the ad (e.g. "Recruitement consultancy", "Direct employer")
+            - sector
+            - parent_sector
+            - knowledge_domain: eg "Engineering", "Legal"
+            - occupation: standardised job title eg "Manager consultant"
     """
     return load_s3_data(
         PRINZ_BUCKET_NAME,
