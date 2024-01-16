@@ -12,7 +12,7 @@ import pandas as pd
 # Let's currently get a sample of the data from PRINZ to work with
 # for labelling etc.
 def get_ojo_sample() -> pd.DataFrame:
-    """Gets ojo sample data from s3
+    """Gets ojo sample data (100,000 job ads) from s3.
 
     Returns:
         pd.Dataframe: ojo sample data with the fields:
