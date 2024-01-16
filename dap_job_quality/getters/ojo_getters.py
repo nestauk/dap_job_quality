@@ -15,7 +15,13 @@ def get_ojo_sample() -> pd.DataFrame:
     """Gets ojo sample data from s3
 
     Returns:
-        pd.Dataframe: ojo sample data
+        pd.Dataframe: ojo sample data with the fields:
+            - `id`: unique identifier for the job ad
+            - `job_title_raw`
+            - `created`: datetime when the job was listed?
+            - `description`: job description
+            - `itl_3_code`
+            - `itl_3_name`
     """
     return load_s3_data(
         PRINZ_BUCKET_NAME,
