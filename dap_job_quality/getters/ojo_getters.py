@@ -79,7 +79,10 @@ def get_ojo_salaries_sample() -> pd.DataFrame:
     """Gets ojo sample data with salaries information from s3
 
     Returns:
-        pd.Dataframe: ojo sample data
+        pd.Dataframe: ojo sample data with the fields:
+            - id: unique identifier of the job ad
+            - min_annualised_salary
+            - max_annualised_salary
     """
     return load_s3_data(
         PRINZ_BUCKET_NAME,
