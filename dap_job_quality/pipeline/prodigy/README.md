@@ -30,19 +30,18 @@ aws s3 cp s3://open-jobs-lake/escoe_extension/outputs/models/ner_model/20230808/
 
 ### Run prodigy instance
 
-To avoid any environment conflicts, it would be best to create a new prodigy environment, [install Prodigy](https://prodi.gy/docs/install) in your prodigy environment and a few additional Python dependencies:
+To avoid any environment conflicts, it would be best to create a new prodigy environment, [install Prodigy](https://prodi.gy/docs/install) in your prodigy environment:
 
 ```
 conda create --name prodigy_env pip python=3.10
 conda activate prodigy_env
 python -m pip install prodigy -f https://XXXX-XXXX-XXXX-XXXX@download.prodi.gy
-python -m pip install -r prodigy_requirements.txt #install additional libraries
 ```
 
 To run the custom prodigy instance, run:
 
 ```
-prodigy benefits_ner_classification job_quality_annotated \
+prodigy benefits_classification job_quality_annotated \
     dap_job_quality/pipeline/prodigy/labelled_data/20240116_ads_to_label.jsonl \
     -F dap_prinz_green_jobs/pipeline/prodigy/custom_recipe.py
 ```
@@ -51,6 +50,5 @@ To save the outputs of the labelling exercise locally and to s3, run:
 
 ```
 prodigy db-out job_quality_annotated > dap_job_quality/pipeline/prodigy/labelled_data/20240116_ads_labelled.jsonl
-
 aws s3 cp dap_job_quality/pipeline/prodigy/labelled_data/20240116_ads_labelled.jsonl s3://open-jobs-lake/job_quality/prodigy/labelled_data/20240116_ads_labelled.jsonl
 ```
