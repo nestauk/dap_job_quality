@@ -55,7 +55,19 @@ def get_ojo_location_sample() -> pd.DataFrame:
     """Gets ojo sample data with location information from s3
 
     Returns:
-        pd.Dataframe: ojo sample data
+        pd.Dataframe: ojo sample data with the fields:
+            - id: unique identifier of the job ad
+            - job_location_raw
+            - itl_1_code: eg "TLJ"
+            - itl_1_name: eg "South East (England)
+            - itl_2_code
+            - itl_2_name
+            - itl_3_code
+            - itl_3_name
+            - is_uk: 1.0 if true, 0.0 if false
+            - is_large_geo: 1.0 if true, 0.0 if false (what does this mean?)
+            - location: standardised from job_location_raw
+            - coordinates
     """
     return load_s3_data(
         PRINZ_BUCKET_NAME,
