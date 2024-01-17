@@ -25,8 +25,11 @@ import os
 @plac.annotations(
     train_size=("train_size", "option", "ts", int),
     to_s3=("to_s3", "option", "s3", bool),
+    random_seed=("random_seed", "option", "rs", int),
 )
-def make_labelled_data(train_size: int = 1000, to_s3: bool = False):
+def make_labelled_data(
+    train_size: int = 1000, to_s3: bool = False, random_seed: int = 42
+):
     """Function to create a sub-sample of the OJO data and
     convert it to .jsonl format from which it can be annotated
     using Prodigy.
@@ -42,7 +45,7 @@ def make_labelled_data(train_size: int = 1000, to_s3: bool = False):
     ojo_sample = (
         get_ojo_sample()
         .drop_duplicates(subset="description")
-        .sample(frac=1, random_state=42)[:train_size]  # shuffle
+        .sample(frac=1, random_state=random_seed)[:train_size]  # shuffle
         .reset_index(drop=True)
     )
 
@@ -75,7 +78,10 @@ def make_labelled_data(train_size: int = 1000, to_s3: bool = False):
         os.makedirs(data_path)
 
     srsly.write_jsonl(
-        os.path.join(data_path, f"{today_date}_ads_to_label.jsonl"),
+        os.path.join(
+            data_path,
+            f"{today_date}_ads_to_label_ts_{str(train_size)}_random_seed_{str(random_seed)}.jsonl",
+        ),
         converted_training_data,
     )
 
@@ -85,8 +91,9 @@ def make_labelled_data(train_size: int = 1000, to_s3: bool = False):
             "job_quality",
             "prodigy",
             "labelled_data",
-            f"{today_date}_ads_to_label.jsonl",
+            f"{today_date}_ads_to_label_ts_{str(train_size)}_random_seed_{str(random_seed)}.jsonl",
         )
+        # this is NOT being saved as a jsonl file, but as a json file
         save_to_s3(BUCKET_NAME, converted_training_data, s3_path)
 
 

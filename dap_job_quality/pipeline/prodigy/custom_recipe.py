@@ -1,12 +1,12 @@
 """
-Custom prodigy recipe to use the NER model to extract BENEFITS and allow for
-free text entry.
+Custom prodigy recipe to use the NER model to pre-label benefits,
+add additional NER labels and allow for free text entry.
 
-To run the custom recipe:
+To run the custom recipe (in the prodigy directory):
 
 prodigy benefits_classification job_quality_annotated \
-    dap_job_quality/pipeline/prodigy/labelled_data/20240116_ads_to_label.jsonl \
-    -F dap_prinz_green_jobs/pipeline/prodigy/custom_recipe.py
+    ./labelled_data/20240117_ads_to_label_ts_1000_random_seed_42.jsonl \
+    -F custom_recipe.py
 """
 from dap_job_quality import PROJECT_DIR, logger
 
@@ -59,24 +59,23 @@ def make_tasks(
                         "end": end,
                         "token_start": token_start,
                         "token_end": token_end,
-                        "label": ent.label_,
+                        "label": str(ent.label_).lower(),
                     }
                 )
         task["spans"] = spans
-
-        # Add a free text entry option
-        task["options"] = [{"id": 0, "text": "Free text entry"}]
 
         yield task
 
 
 @prodigy.recipe(
-    "benefits_ner_classification",
+    "benefits_classification",
     dataset=("The dataset to use", "positional", None, str),
     source=("The source data as a .jsonl file", "positional", None, Path),
 )
 def custom_ner(dataset, source):
     # Initialize the Prodigy stream
+    blocks = [{"view_id": "ner_manual"}, {"view_id": "text_input"}]
+
     stream = JSONL(source)
 
     # Add tokens to the stream
@@ -87,10 +86,24 @@ def custom_ner(dataset, source):
 
     return {
         "dataset": dataset,  # save annotations in this dataset
-        "view_id": "ner_manual",  # use the ner_manual interface
+        "view_id": "blocks",
         "stream": stream,
         "config": {
             "buttons": ["accept", "reject", "ignore"],
-            "labels": ["BENEFIT"],  # the label for the manual NER interface
+            "labels": [
+                "1_job_type",
+                "1_full_time_part_time",
+                "1_working_hours",
+                "1_casual_work",
+                "2_pay",
+                "2_entitlements",
+                "3_health_safety_wellbeing",
+                "4_job_design_nature_of_work",
+                "5_social_support_cohesion",
+                "6_voice_representation",
+                "7_work_life_balance",
+                "other_benefits",
+            ],
+            "blocks": blocks,
         },
     }
