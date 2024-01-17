@@ -41,8 +41,8 @@ prodigy benefits_classification job_quality_annotated \
 To save the outputs of the labelling exercise locally and to s3, run:
 
 ```
-prodigy db-out job_quality_annotated > dap_job_quality/pipeline/prodigy/labelled_data/20240117_ads_labelled.jsonl
-aws s3 cp dap_job_quality/pipeline/prodigy/labelled_data/20240117_ads_labelled.jsonl s3://open-jobs-lake/job_quality/prodigy/labelled_data/20240117_ads_labelled.jsonl
+prodigy db-out job_quality_annotated > ./labelled_data/20240117_ads_labelled.jsonl
+aws s3 cp ./labelled_data/20240117_ads_labelled.jsonl s3://open-jobs-lake/job_quality/prodigy/labelled_data/20240117_ads_labelled.jsonl
 ```
 
 ### Labelling guidelines
