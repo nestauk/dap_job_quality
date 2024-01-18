@@ -94,7 +94,6 @@ def custom_ner(dataset, source):
                 "1_job_type",
                 "1_full_time_part_time",
                 "1_working_hours",
-                "1_casual_work",
                 "2_pay",
                 "2_entitlements",
                 "3_health_safety_wellbeing",
