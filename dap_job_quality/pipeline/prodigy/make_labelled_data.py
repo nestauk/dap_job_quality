@@ -21,6 +21,8 @@ from dap_job_quality import BUCKET_NAME, PROJECT_DIR, logger
 from datetime import datetime
 import os
 
+import json
+
 
 @plac.annotations(
     train_size=("train_size", "option", "ts", int),
@@ -39,6 +41,7 @@ def make_labelled_data(
             Defaults to 1000.
         save_to_s3 (bool, optional): whether to save labelled data to s3.
             Defaults to False.
+        random_seed (int, optional): random seed for reproducibility.
     """
 
     # load ojo sample and subset of unique job descriptions
@@ -59,13 +62,19 @@ def make_labelled_data(
 
     data_to_label = ojo_sample[["id", "clean_description"]].to_dict(orient="records")
 
-    converted_training_data = []
+    converted_training_data_local = []
+    converted_training_data_jsonl = ""
     for data in data_to_label:
         training_data_json = {
             "text": data["clean_description"],
             "meta": {"job_id": data["id"]},
         }
-        converted_training_data.append(training_data_json)
+        converted_training_data_local.append(training_data_json)
+        # create json lines for s3
+        converted_training_data_jsonl += json.dumps(
+            training_data_json, ensure_ascii=False
+        )
+        converted_training_data_jsonl += "\n"
 
     # save data locally
     today_date = datetime.today().strftime("%Y-%m-%d").replace("-", "")
@@ -82,7 +91,7 @@ def make_labelled_data(
             data_path,
             f"{today_date}_ads_to_label_ts_{str(train_size)}_random_seed_{str(random_seed)}.jsonl",
         ),
-        converted_training_data,
+        converted_training_data_local,
     )
 
     if to_s3:
@@ -94,7 +103,7 @@ def make_labelled_data(
             f"{today_date}_ads_to_label_ts_{str(train_size)}_random_seed_{str(random_seed)}.jsonl",
         )
         # this is NOT being saved as a jsonl file, but as a json file
-        save_to_s3(BUCKET_NAME, converted_training_data, s3_path)
+        save_to_s3(BUCKET_NAME, converted_training_data_jsonl, s3_path)
 
 
 if __name__ == "__main__":
