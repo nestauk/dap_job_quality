@@ -34,7 +34,7 @@ To run the custom prodigy instance (in the `prodigy` directory), run:
 
 ```
 prodigy benefits_classification job_quality_annotated \
-    ./labelled_data/20240117_ads_to_label_ts_1000_random_seed_42.jsonl \
+    ./labelled_data/YYYYMMDD_ads_to_label_ts_1000_random_seed_42.jsonl \
     -F custom_recipe.py
 ```
 
