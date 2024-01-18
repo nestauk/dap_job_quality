@@ -30,6 +30,8 @@ To install prodigy, run:
 python -m pip install prodigy -f https://XXXX-XXXX-XXXX-XXXX@download.prodi.gy
 ```
 
+where `XXXX-XXXX-XXXX-XXXX` is the prodigy license key.
+
 To run the custom prodigy instance (in the `prodigy` directory), run:
 
 ```
