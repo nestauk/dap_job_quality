@@ -20,8 +20,7 @@ research_daps/
 metaflow.s3.*
 .run_id
 
-# Notebooks (use jupytext instead!)
-*.ipynb
+# Notebooks in scrap subfolders
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
