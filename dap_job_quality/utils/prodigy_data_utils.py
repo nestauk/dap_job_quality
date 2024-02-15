@@ -1,3 +1,7 @@
+"""
+Helper functions for handling data that has been labelled in Prodigy.
+"""
+
 from spacy.tokens import Span, Doc
 import spacy
 import srsly
