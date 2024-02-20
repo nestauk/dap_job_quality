@@ -8,3 +8,4 @@ toolz
 plac
 srsly
 openpyxl
+xlrd
