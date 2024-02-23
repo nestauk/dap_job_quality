@@ -16,14 +16,14 @@ import pandas as pd
 
 
 # Current OJO data paths
-occupation_measures_s3 = "outputs/data/ojo_application/extracted_green_measures/20240213/ojo_large_sample_occupation_green_measures_production_true.csv"
-large_ojo_sample_s3 = (
+OCC_MEASURES_S3 = "outputs/data/ojo_application/extracted_green_measures/20240213/ojo_large_sample_occupation_green_measures_production_true.csv"
+LARGE_OJO_SAMPLE_S3 = (
     "outputs/data/ojo_application/deduplicated_sample/all_ojo_sample.parquet"
 )
-location_measures_s3 = (
+LOCATION_MEASURES_S3 = (
     "outputs/data/ojo_application/deduplicated_sample/all_locations_data_sample.parquet"
 )
-salary_measures_s3 = (
+SALARY_MEASURES_S3 = (
     "outputs/data/ojo_application/deduplicated_sample/all_salaries_data_sample.parquet"
 )
 
@@ -94,10 +94,10 @@ def merge_ojo_df(
 
 
 if __name__ == "__main__":
-    ojo_occ = load_s3_data(PRINZ_BUCKET_NAME, occupation_measures_s3)
-    ojo_loc = load_s3_data(PRINZ_BUCKET_NAME, location_measures_s3)
-    ojo_sal = load_s3_data(PRINZ_BUCKET_NAME, salary_measures_s3)
-    ojo_df = load_s3_data(PRINZ_BUCKET_NAME, large_ojo_sample_s3)
+    ojo_occ = load_s3_data(PRINZ_BUCKET_NAME, OCC_MEASURES_S3)
+    ojo_loc = load_s3_data(PRINZ_BUCKET_NAME, LOCATION_MEASURES_S3)
+    ojo_sal = load_s3_data(PRINZ_BUCKET_NAME, SALARY_MEASURES_S3)
+    ojo_df = load_s3_data(PRINZ_BUCKET_NAME, LARGE_OJO_SAMPLE_S3)
     ojo_df.drop(columns=["description"], inplace=True)
 
     clean_df = merge_ojo_df(ojo_df, ojo_occ, ojo_loc, ojo_sal, save_file=True)

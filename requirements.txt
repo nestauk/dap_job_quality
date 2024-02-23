@@ -9,3 +9,4 @@ plac
 srsly
 openpyxl
 xlrd
+seaborn
