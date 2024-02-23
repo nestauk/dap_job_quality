@@ -7,7 +7,7 @@ python -m dap_job_quality.pipeline.salary.salary_internal_tests"""
 
 
 from dap_job_quality import PRINZ_BUCKET_NAME, PROJECT_DIR, logger
-from dap_job_quality.getters.data_getters import load_s3_data, load_s3_excel, save_to_s3
+from dap_job_quality.getters.data_getters import load_s3_data
 
 import pandas as pd
 import unittest
