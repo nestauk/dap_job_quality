@@ -108,6 +108,7 @@ target/
 /outputs/data/*
 !/outputs/data/*.md
 /outputs/models/*
+/outputs/figures/*
 !/outputs/models/*.md
 
 # Mac OS-specific storage files
