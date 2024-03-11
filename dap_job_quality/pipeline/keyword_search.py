@@ -38,27 +38,36 @@ def run_keyword_search(
     df: pd.DataFrame, search_terms: dict, no_of_sentences: int = 10000
 ) -> pd.DataFrame:
     data_for_search = get_analysis_sample(df, no_of_sentences)
-    output_dictionary = {
-        term[
-            "target_phrase"
-        ]: f"{term['dimension']} - {term['subcategory']} - {term['target_phrase']}"
-        for term in search_terms
-    }
-    target_phrases = [term["target_phrase"] for term in search_terms]
+
+    target_phrases = list(search_terms.keys())
 
     for item in data_for_search:
         sentence = item["sentence"]
         target_phrases_contained = [
-            output_dictionary[phrase] for phrase in target_phrases if phrase in sentence
+            phrase for phrase in target_phrases if phrase in sentence
         ]
-        if target_phrases_contained:
-            item["benefit"] = "yes"
-            item["target_phrase"] = target_phrases_contained
-        else:
-            item["benefit"] = "no"
+        item["target_phrases_found"] = target_phrases_contained
 
     output_df = pd.DataFrame(data_for_search)
-    output_df.to_csv(f"{PROJECT_DIR}/outputs/data/keyword_search.csv")
+    output_df = output_df.explode(
+        "target_phrases_found"
+    )  # Create one row for each target phrase found
+
+    # Add the dimension and subcategory to the dataframe
+    output_df["dimension"] = (
+        output_df["target_phrases_found"]
+        .map(search_terms)
+        .apply(lambda x: x["dimension"] if pd.notnull(x) else None)
+    )
+    output_df["subcategory"] = (
+        output_df["target_phrases_found"]
+        .map(search_terms)
+        .apply(lambda x: x["subcategory"] if pd.notnull(x) else None)
+    )
+
+    todays_date = pd.to_datetime("today").date()
+
+    output_df.to_csv(f"{PROJECT_DIR}/outputs/data/keyword_search_{todays_date}.csv")
 
 
 if __name__ == "__main__":
@@ -70,10 +79,12 @@ if __name__ == "__main__":
     ojo_df["clean_description"] = ojo_df["description"].apply(clean_text)
 
     # Get current search terms
-    search_terms = pd.read_csv(f"{PROJECT_DIR}/inputs/keyword_lookup.csv").to_dict(
-        orient="records"
+    search_terms = (
+        pd.read_csv(f"{PROJECT_DIR}/inputs/keyword_lookup.csv")
+        .set_index("target_phrase")
+        .to_dict(orient="index")
     )
 
     run_keyword_search(ojo_df, search_terms)
 
-    logger.info("Analysis complete - output saved to outputs/data/keyword_search.csv")
+    logger.info("Analysis complete - output saved to outputs/data/")

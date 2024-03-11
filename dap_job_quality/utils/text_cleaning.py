@@ -132,7 +132,7 @@ def split_sentences(text: str) -> List[str]:
         List[str]: A list of sentences
     """
     # split phrases on .?!
-    pattern = re.compile(r"([.?!])\s+")
+    pattern = re.compile(r"([.?!])\s*")
     # Split the text into sentences using the pattern
     sentences = re.split(pattern, text)
 
