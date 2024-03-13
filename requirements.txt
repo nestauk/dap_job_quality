@@ -7,3 +7,6 @@ sentence-transformers
 toolz
 plac
 srsly
+openpyxl
+xlrd
+seaborn
