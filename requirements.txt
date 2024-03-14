@@ -11,3 +11,6 @@ spacy
 srsly
 toolz
 wordcloud
+openpyxl
+xlrd
+seaborn

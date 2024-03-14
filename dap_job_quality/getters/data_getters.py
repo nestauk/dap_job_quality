@@ -273,3 +273,18 @@ def get_s3_data_paths(bucket_name: str, root: str, file_types=["*.jsonl"]):
             s3_keys.append(key)
 
     return s3_keys
+
+
+def load_s3_excel(bucket_name: str, file_name: str, sheet_name: str = "All"):
+    """
+    Getter for reading in ONS ASHE data (or other excel files as needed)
+
+    Args:
+        bucket_name (str): S3 bucket
+        file_name (str): Path to the file in the S3 bucket
+        sheet_name (str, optional):Name of the tab. Defaults to "All", as this is the relevant tab in all ONS ASHE files (as of Feb 2024).
+
+    Returns:
+        Loaded data (df)
+    """
+    return pd.read_excel("s3://" + BUCKET_NAME + "/" + file_name, sheet_name="All")
