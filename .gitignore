@@ -20,8 +20,7 @@ research_daps/
 metaflow.s3.*
 .run_id
 
-# Notebooks (use jupytext instead!)
-*.ipynb
+# Notebooks in scrap subfolders
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -109,6 +108,7 @@ target/
 /outputs/data/*
 !/outputs/data/*.md
 /outputs/models/*
+/outputs/figures/*
 !/outputs/models/*.md
 
 # Mac OS-specific storage files
