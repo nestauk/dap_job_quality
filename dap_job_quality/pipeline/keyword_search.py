@@ -112,6 +112,7 @@ if __name__ == "__main__":
         pd.read_csv(INPUT_PATH).set_index("target_phrase").to_dict(orient="index")
     )
 
-    run_keyword_search(ojo_df, search_terms, 100)
+
+    run_keyword_search(ojo_df, search_terms)
 
     logger.info("Analysis complete - output saved to outputs/data/")

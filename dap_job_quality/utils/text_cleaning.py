@@ -1,11 +1,13 @@
 """
 Functions to minimally clean job advertisements.
 """
-from toolz import pipe
-import re
-from typing import List
-
 from hashlib import md5
+import nltk
+from nltk.corpus import stopwords
+from nltk.util import ngrams
+import re
+from toolz import pipe
+from typing import List, Tuple
 
 # Pattern for fixing a missing space between enumerations, for
 # split_sentences()
@@ -153,3 +155,31 @@ def short_hash(text: str) -> int:
     int_code = int(hx_code, 16)
     short_code = str(int_code)[:16]
     return int(short_code)
+
+
+def tokenize(text: str, n: int = 2) -> List[Tuple[str, ...]]:
+    """
+    Tokenize the input text into n-grams.
+
+    This function tokenizes the input text into n-grams after converting the text to lowercase
+    and removing non-alphabetic characters and stopwords.
+
+    **Use `clean_text()` before using this function**
+
+    #TODO: remove the `.isalpha()` part because it conflicts with the functions called as part of `clean_text()`
+
+    Args:
+        text (str): The text to be tokenized.
+        n (int): The number of elements in each n-gram (default is 2).
+
+    Returns:
+        List[Tuple[str, ...]]: A list of n-grams, where each n-gram is represented as a tuple of strings.
+    """
+    tokens = nltk.word_tokenize(text)
+    tokens = [
+        word.lower() for word in tokens if word.isalpha()
+    ]  # Remove non-alphabetic tokens
+    stop_words = set(stopwords.words("english"))
+    tokens = [word for word in tokens if word not in stop_words]
+    n_grams = list(ngrams(tokens, n))
+    return n_grams

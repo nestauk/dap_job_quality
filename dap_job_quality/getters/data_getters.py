@@ -1,14 +1,17 @@
+import boto3
+from botocore.exceptions import NoCredentialsError, ClientError
+from decimal import Decimal
 from fnmatch import fnmatch
-import json
-import pickle
 import gzip
+import json
+import numpy
 import os
-
 import pandas as pd
 from pandas import DataFrame
-import boto3
-from decimal import Decimal
-import numpy
+from pathlib import Path
+import pickle
+import srsly
+from typing import List, Dict, Optional
 import yaml
 
 from dap_job_quality import BUCKET_NAME, PROJECT_DIR, logger
@@ -57,6 +60,38 @@ def load_json_dict(file_name: str) -> dict:
             return json.load(file)
     else:
         logger.error(f'{file_name} has wrong file extension! Only supports "*.json"')
+
+
+def load_jsonl(file_path: str) -> List[Dict]:
+    """
+    Loads a JSON Lines (JSONL) file into a list of dictionaries.
+
+    Each line in the JSONL file should be a valid JSON object. Lines that are not valid JSON
+    objects will be skipped, and an error message will be printed.
+
+    Args:
+        file_path (str): The path to the JSONL file.
+
+    Returns:
+        List[Dict]: A list of dictionaries, where each dictionary represents a JSON object
+                    from a line in the JSONL file.
+
+    Raises:
+        ValueError: If a line in the file is not a valid JSON object.
+    """
+    data = []
+    with open(file_path, "r", encoding="utf-8-sig") as file:
+        for line_number, line in enumerate(file, 1):
+            line = line.strip()  # Remove leading/trailing whitespace
+            if not line:
+                # Skip empty lines
+                continue
+            try:
+                data.append(srsly.json_loads(line))
+            except ValueError as e:  # srsly raises ValueError for JSON errors
+                print(f"Error parsing JSON on line {line_number}: {e}")
+                # Optionally, continue to next line or handle error differently
+    return data
 
 
 def save_json_dict(dictionary: dict, file_name: str):
@@ -132,6 +167,53 @@ def load_s3_json(bucket_name, file_name):
     return json.loads(file)
 
 
+def load_s3_jsonl(
+    bucket_name: str, s3_file_name: str, local_file: str
+) -> Optional[List[Dict]]:
+    """Downloads a jsonl from s3 and loads it into a list of dictionaries.
+
+    Args:
+        bucket_name (str): The name of the S3 bucket.
+        s3_file_name (str): The S3 key for the file to be downloaded.
+        local_file (str): The local file path where the downloaded file will be saved.
+
+    Returns:
+        Optional[List[Dict]]: A list of dictionaries loaded from the JSONL file.
+                              Returns None if the file could not be downloaded or parsed.
+
+    Raises:
+        FileNotFoundError: Raised if the specified file in the S3 bucket is not found OR the local path can't be found.
+        NoCredentialsError: Raised if AWS credentials are not available.
+    """
+    # Create an S3 client
+    s3 = boto3.client("s3")
+
+    output_file = None
+
+    # Make sure that the directory where you want to store the file exists
+    Path(local_file).parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Download the file
+        s3.download_file(bucket_name, s3_file_name, local_file)
+        logger.info(
+            f"File {s3_file_name} downloaded from {bucket_name} to {local_file}"
+        )
+
+        output_file = load_jsonl(local_file)
+    except FileNotFoundError:
+        print(f"The file {s3_file_name} was not found in {bucket_name}")
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "404":
+            print(f"The file {s3_file_name} was not found in bucket {bucket_name}.")
+        else:
+            print(f"An error occurred: {e}")
+    except NoCredentialsError:
+        print("Credentials not available")
+
+    return output_file
+
+
 def load_s3_data(bucket_name: str, file_name: str):
     """Load a file from an S3 location.
 
@@ -191,3 +273,18 @@ def get_s3_data_paths(bucket_name: str, root: str, file_types=["*.jsonl"]):
             s3_keys.append(key)
 
     return s3_keys
+
+
+def load_s3_excel(bucket_name: str, file_name: str, sheet_name: str = "All"):
+    """
+    Getter for reading in ONS ASHE data (or other excel files as needed)
+
+    Args:
+        bucket_name (str): S3 bucket
+        file_name (str): Path to the file in the S3 bucket
+        sheet_name (str, optional):Name of the tab. Defaults to "All", as this is the relevant tab in all ONS ASHE files (as of Feb 2024).
+
+    Returns:
+        Loaded data (df)
+    """
+    return pd.read_excel("s3://" + BUCKET_NAME + "/" + file_name, sheet_name="All")
