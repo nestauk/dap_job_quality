@@ -92,6 +92,9 @@ def run_keyword_search(
         .apply(lambda x: x["subcategory"] if pd.notnull(x) else None)
     )
 
+    # Filter out sentence splitting eror
+    output_df = output_df[output_df["sentence"].str.len() > 1]
+
     output_df.to_csv(OUTPUT_PATH)
     path = OUTPUT_PATH
     if not path.exists():
@@ -111,7 +114,6 @@ if __name__ == "__main__":
     search_terms = (
         pd.read_csv(INPUT_PATH).set_index("target_phrase").to_dict(orient="index")
     )
-
 
     run_keyword_search(ojo_df, search_terms)
 
