@@ -71,7 +71,7 @@ def run_keyword_search(
     for item in data_for_search:
         sentence = item["sentence"]
         target_phrases_contained = [
-            phrase for phrase in target_phrases if phrase in sentence
+            phrase for phrase in target_phrases if phrase in sentence.lower()
         ]
         item["target_phrases_found"] = target_phrases_contained
 
@@ -112,6 +112,6 @@ if __name__ == "__main__":
         pd.read_csv(INPUT_PATH).set_index("target_phrase").to_dict(orient="index")
     )
 
-    run_keyword_search(ojo_df, search_terms)
+    run_keyword_search(ojo_df, search_terms, 100)
 
     logger.info("Analysis complete - output saved to outputs/data/")
