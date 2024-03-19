@@ -76,7 +76,7 @@ punctuation_replacement_rules = {
     # old patterns: replacement pattern
     # Convert bullet points to fullstops
     "[\u2022\u2023\u25E6\u2043\u2219*]": ".",
-    r"[/:\\-]": " ",  # Convert colon, forward and backward slashes and hyphens to spaces
+    r"[/:\\]": " ",  # Convert colon, forward and backward slashes to spaces
 }
 
 compiled_punct_patterns = {
