@@ -71,7 +71,7 @@ def run_keyword_search(
     for item in data_for_search:
         sentence = item["sentence"]
         target_phrases_contained = [
-            phrase for phrase in target_phrases if phrase in sentence
+            phrase for phrase in target_phrases if phrase in sentence.lower()
         ]
         item["target_phrases_found"] = target_phrases_contained
 
@@ -91,6 +91,9 @@ def run_keyword_search(
         .map(search_terms)
         .apply(lambda x: x["subcategory"] if pd.notnull(x) else None)
     )
+
+    # Filter out sentence splitting eror
+    output_df = output_df[output_df["sentence"].str.len() > 1]
 
     output_df.to_csv(OUTPUT_PATH)
     path = OUTPUT_PATH
