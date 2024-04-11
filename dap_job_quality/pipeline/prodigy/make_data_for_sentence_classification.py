@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from dap_job_quality import PROJECT_DIR
 from dap_job_quality.getters.ojo_getters import get_ojo_sample
@@ -10,6 +11,7 @@ import dap_job_quality.utils.text_cleaning as tc
 np.random.seed(42)
 
 OUT_FILE = PROJECT_DIR / "inputs/labelling/job_sentences.jsonl"
+OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 if __name__ == "__main__":
     unlabelled_data = get_ojo_sample()

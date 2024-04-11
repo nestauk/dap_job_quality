@@ -1,7 +1,7 @@
 """
 Usage:
 
-To start the app:
+To start the app, navigate to this directory and run the following command:
 ```
 prodigy job_ad_sent_cat job_sentences_sample ../../../inputs/labelling/job_sentences.jsonl -F sentence_classifier_recipe.py
 ```
@@ -49,6 +49,9 @@ comp_desc = pipeline("text-classification", model=model, tokenizer=tokenizer)
 KEYWORDS = pd.read_csv(PROJECT_DIR / "inputs/keyword_lookup.csv")
 KEYWORDS = KEYWORDS["target_phrase"].unique()
 KEYWORDS = [keyword.lower() for keyword in KEYWORDS]
+
+OUT_PATH = PROJECT_DIR / "inputs/labelled/job_sentences_labelled.jsonl"
+OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 def make_span_dict(start, end, token_start, token_end, sent):
