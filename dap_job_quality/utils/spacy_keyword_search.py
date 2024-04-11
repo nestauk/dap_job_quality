@@ -10,7 +10,16 @@ from spacy import displacy
 from spacy.matcher import Matcher
 
 
-def get_matches(text, patterns, matcher, nlp):
+nlp = spacy.load("en_core_web_sm")
+matcher = Matcher(nlp.vocab)
+
+
+def get_matches(
+    text: str,
+    patterns: list,
+    matcher: Matcher = matcher,
+    nlp: spacy.lang.en.English = nlp,
+) -> tuple:
     """Takes text and returns spacy matches, based on the patterns.
 
     Args:
@@ -31,7 +40,7 @@ def get_matches(text, patterns, matcher, nlp):
     return doc, matches
 
 
-def get_spans(doc, matches, nlp):
+def get_spans(doc: spacy.tokens.doc.Doc, matches: list, nlp=nlp) -> list:
     """Takes matches and converts them into the format required for the displacy visualiser.
     This also collapses the matches - if two keywords are found for the same label in the same sentence, the
     label will go from the first letter of the first keyword, to the last letter of the last keyword (including all words in between).
@@ -40,7 +49,11 @@ def get_spans(doc, matches, nlp):
         matches (list): matches (tuples of the match id, start span, end span)
 
     Returns:
-        list: spans in correct format
+        list: list of dictionaries, each containing the start and end token, the label, and the sentence. The format for each dictonary is:
+        {'start_token': [int: the start token of the match],
+        'end_token': [int: the end token of the match],
+        'label': [str: a label from the 'subcategory' in the keyword list],
+        'sent': [str: the sentence containing the match]}
     """
     # Get a list of individual matches
     spans_list = []
@@ -72,7 +85,7 @@ def get_spans(doc, matches, nlp):
     return collapsed_list
 
 
-def render_spans(doc, matches):
+def render_spans(doc: spacy.tokens.doc.Doc, matches: list):
     """Renders the full text with labels shown in a jupyter notebook
 
     Args:
@@ -86,7 +99,12 @@ def render_spans(doc, matches):
     displacy.render(test_input, style="span", manual=True)
 
 
-def keyword_search_df(df, patterns, matcher, nlp):
+def keyword_search_df(
+    df: pd.DataFrame,
+    patterns: list,
+    matcher: Matcher = matcher,
+    nlp: spacy.lang.en.English = nlp,
+) -> pd.DataFrame:
     """Run the keyword search on a dataframe, and add the spans to the dataframe
 
     Args:

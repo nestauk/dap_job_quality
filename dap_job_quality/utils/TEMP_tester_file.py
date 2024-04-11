@@ -18,12 +18,9 @@ OUTPUT_PATH = PROJECT_DIR / "outputs/data/keyword_output.csv"
 
 
 if __name__ == "__main__":
-    nlp = spacy.load("en_core_web_sm")
-    matcher = Matcher(nlp.vocab)
-
     raw_df = get_ojo_sample()
     raw_df["clean_description"] = raw_df["description"].apply(clean_text)
     small_df = raw_df.head(1000)
 
-    annotated_df = keyword_search_df(small_df, keywords, matcher, nlp)
+    annotated_df = keyword_search_df(small_df, keywords)
     annotated_df.to_csv(OUTPUT_PATH)
