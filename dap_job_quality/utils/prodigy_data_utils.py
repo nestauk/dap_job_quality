@@ -46,6 +46,16 @@ def get_spans_and_sentences(
     training_data = {}
 
     for record in records:
+        # Determine the correct job_id location
+        # Some of the data we have has a nested dictionary called "meta", others have a top-level key called "id"
+        job_id = (
+            record.get("id") if "id" in record else record.get("meta", {}).get("job_id")
+        )
+
+        # Check if job_id exists, if not, skip the record or handle it as needed
+        if not job_id:
+            continue  # or handle missing job_id as needed
+
         # convert each text to a spacy document
         doc: Doc = nlp(record["text"])
         # get the labelled spans within each document
@@ -70,6 +80,6 @@ def get_spans_and_sentences(
             spans_parsed.append(
                 {"span": "", "sent": "", "label": "none", "text": record["text"]}
             )
-        training_data[record["meta"]["job_id"]] = spans_parsed
+        training_data[job_id] = spans_parsed
 
     return training_data
