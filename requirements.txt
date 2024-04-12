@@ -1,10 +1,12 @@
 boto3
 fsspec
+langchain_openai
 matplotlib
 nltk
 pandas
 plac
 pyarrow
+python-dotenv
 s3fs==2023.12.2
 sentence-transformers
 spacy
