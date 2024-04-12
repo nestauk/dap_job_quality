@@ -1,20 +1,26 @@
+import boto3
+from botocore.exceptions import NoCredentialsError
+from datetime import date
 from dotenv import load_dotenv
 import json
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 import os
-import pandas as pd
+
+# import pandas as pd
 from pathlib import Path
 
-from dap_job_quality import PROJECT_DIR
+from dap_job_quality import PROJECT_DIR, BUCKET_NAME
 
 GPT_MODEL = "gpt-3.5-turbo"  # "gpt-3.5-turbo-16k"
 TEMP = 0.7
 SYSTEM_MESSAGE = "You randomly generate sentences from job adverts. You label them 1 if related to job quality, or 0 if not related to job quality."
-N_SAMPLES = 10
+N_SAMPLES = 100
 
-OUT_FILE = PROJECT_DIR / "inputs/labelled/dummy_job_sentences.jsonl"
+FILENAME = f"dummy_job_sentences_{date.today()}.jsonl"
+S3_PATH = f"job_quality/sentence_classifier/inputs/labelled/{FILENAME}"
+OUT_FILE = PROJECT_DIR / f"inputs/labelled/{FILENAME}"
 OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 load_dotenv()
@@ -23,6 +29,8 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 INPUT = """
 
 Generate a job advert sentence and return it with a label if it is related to job quality or not. The label will be 1 if the sentence relates to the compensation package, the contract type, working hours, info about the team you'll be joining or sentences that relate to “why you should want to work here”; it will be 0 if the sentence describes role requirements, "what will be expected of you", "how to apply", or anything else that does not directly determine job quality.
+
+Avoid generic statements like "We offer a competitive salary and benefits package". Instead, focus on specific details that would be found in a job advert.
 
 Examples:
 sentence: This job provides ample opportunities for career development and progression.
@@ -53,6 +61,28 @@ sentence: This role requires strong attention to detail and the ability to meet 
 label: 0
 """
 
+
+def upload_file_to_s3(local_file, bucket_name, s3_file_name):
+    """
+    Upload a file to an S3 bucket
+
+    :param local_file: File to upload
+    :param bucket_name: Bucket to upload to
+    :param s3_file_name: S3 object name. If not specified then local_file is used
+    """
+    # Create an S3 client
+    s3 = boto3.client("s3")
+
+    try:
+        # Upload the file
+        s3.upload_file(local_file, bucket_name, s3_file_name)
+        print(f"File {local_file} uploaded to {bucket_name}/{s3_file_name}")
+    except FileNotFoundError:
+        print(f"The file {local_file} was not found")
+    except NoCredentialsError:
+        print("Credentials not available")
+
+
 if __name__ == "__main__":
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -82,7 +112,7 @@ if __name__ == "__main__":
     with open(OUT_FILE, "w") as file:
         for answer in answers:
             blocks = answer.strip().split("\n\n")
-            sentence_dicts = []
+            # sentence_dicts = []
             for block in blocks:
                 lines = block.split("\n")
 
@@ -104,3 +134,5 @@ if __name__ == "__main__":
                 sent_dict = {"sentence": sentence, "label": label}
                 sent_dict_string = json.dumps(sent_dict)
                 file.write(sent_dict_string + "\n")
+
+    upload_file_to_s3(OUT_FILE, BUCKET_NAME, S3_PATH)
