@@ -18,6 +18,7 @@ prodigy drop job_sentences_sample
 """
 
 import copy
+from datetime import datetime
 import pandas as pd
 from pathlib import Path
 import prodigy
@@ -28,7 +29,9 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from transformers import pipeline
 from typing import Iterator
 
-from dap_job_quality import PROJECT_DIR, logger
+from dap_job_quality import PROJECT_DIR, BUCKET_NAME, logger
+from dap_job_quality.getters.data_getters import save_to_s3
+from dap_job_quality.utils.spacy_keyword_search import get_matches
 
 # LOAD SKILLS NER MODEL
 model_folder = PROJECT_DIR / "outputs/models/ner_model/20230808"
@@ -46,12 +49,11 @@ model = AutoModelForSequenceClassification.from_pretrained(
 tokenizer = AutoTokenizer.from_pretrained("ihk/jobbert-base-cased-compdecs")
 comp_desc = pipeline("text-classification", model=model, tokenizer=tokenizer)
 
-KEYWORDS = pd.read_csv(PROJECT_DIR / "inputs/keyword_lookup.csv")
-KEYWORDS = KEYWORDS["target_phrase"].unique()
-KEYWORDS = [keyword.lower() for keyword in KEYWORDS]
+today_date = datetime.today().strftime("%Y-%m-%d").replace("-", "")
 
-OUT_PATH = PROJECT_DIR / "inputs/labelled/job_sentences_labelled.jsonl"
-OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+OUT_PATH_LOCAL = PROJECT_DIR / "inputs/labelled/job_sentences_labelled.jsonl"
+OUT_PATH_LOCAL.parent.mkdir(parents=True, exist_ok=True)
+OUT_PATH_S3 = "job_quality/prodigy/binary_classifier_labelled_data/{today_date}/job_sentences_labelled.jsonl"
 
 
 def make_span_dict(start, end, token_start, token_end, sent):
@@ -65,9 +67,7 @@ def make_span_dict(start, end, token_start, token_end, sent):
     }
 
 
-def make_tasks(
-    nlp: spacy.language.Language, stream: Iterator[dict], keywords=KEYWORDS
-) -> Iterator[dict]:
+def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator[dict]:
     for eg in stream:
         doc = nlp(eg["text"])
         spans = []
@@ -101,7 +101,7 @@ def make_tasks(
             token_start = sent.start
             token_end = sent.end
 
-            contains_keyword = any(token.text.lower() in keywords for token in sent)
+            contains_keyword = len(get_matches(sent.text)[1]) > 0
             contains_skill_entity = any(ent.label_ == "SKILL" for ent in sent.ents)
             is_company_description = comp_desc(sent.text)[0]["label"] == "LABEL_1"
 
