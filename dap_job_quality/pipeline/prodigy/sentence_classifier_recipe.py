@@ -43,6 +43,7 @@ if not model_folder.exists():
 
 nlp = spacy.load(model_folder)
 
+"""
 # LOAD COMPANY DESCRIPTION CLASSIFIER
 logger.info("Loading company description classifier...")
 
@@ -53,6 +54,7 @@ tokenizer = AutoTokenizer.from_pretrained("ihk/jobbert-base-cased-compdecs")
 comp_desc = pipeline("text-classification", model=model, tokenizer=tokenizer)
 
 logger.info("Models loaded successfully.")
+"""
 
 today_date = datetime.today().strftime("%Y-%m-%d").replace("-", "")
 
@@ -81,10 +83,12 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
         comp_descs = []
         skills_and_benefits = []
         for sent in doc.sents:  # Iterate over sentences
+            """
             if comp_desc(sent.text)[0]["label"] == "LABEL_1":
                 comp_desc_dict = comp_desc(sent.text)[0]
                 comp_desc_dict["sentence"] = sent.text
                 comp_descs.append(comp_desc_dict)
+            """
 
             skills_and_benefits.append(
                 {
@@ -108,12 +112,12 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
 
             contains_keyword = len(get_matches(sent.text)[1]) > 0
             contains_skill_entity = any(ent.label_ == "SKILL" for ent in sent.ents)
-            is_company_description = comp_desc(sent.text)[0]["label"] == "LABEL_1"
+            # is_company_description = comp_desc(sent.text)[0]["label"] == "LABEL_1"
 
             if (
                 contains_keyword
                 and not contains_skill_entity
-                and not is_company_description
+                # and not is_company_description
             ):
                 spans.append(make_span_dict(start, end, token_start, token_end, sent))
             else:
@@ -129,7 +133,7 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
 
         task["skills_and_benefits"] = skills_and_benefits
         task["spans"] = list(unique_spans)
-        task["comp_descs"] = comp_descs
+        # task["comp_descs"] = comp_descs
 
         yield task
 
