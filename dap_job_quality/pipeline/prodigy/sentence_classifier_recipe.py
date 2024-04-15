@@ -34,6 +34,7 @@ from dap_job_quality.getters.data_getters import save_to_s3
 from dap_job_quality.utils.spacy_keyword_search import get_matches
 
 # LOAD SKILLS NER MODEL
+logger.info("Loading NER model...")
 model_folder = PROJECT_DIR / "outputs/models/ner_model/20230808"
 if not model_folder.exists():
     logger.error(
@@ -43,11 +44,15 @@ if not model_folder.exists():
 nlp = spacy.load(model_folder)
 
 # LOAD COMPANY DESCRIPTION CLASSIFIER
+logger.info("Loading company description classifier...")
+
 model = AutoModelForSequenceClassification.from_pretrained(
     "ihk/jobbert-base-cased-compdecs"
 )
 tokenizer = AutoTokenizer.from_pretrained("ihk/jobbert-base-cased-compdecs")
 comp_desc = pipeline("text-classification", model=model, tokenizer=tokenizer)
+
+logger.info("Models loaded successfully.")
 
 today_date = datetime.today().strftime("%Y-%m-%d").replace("-", "")
 
