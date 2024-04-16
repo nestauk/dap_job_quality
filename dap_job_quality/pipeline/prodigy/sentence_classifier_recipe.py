@@ -3,7 +3,7 @@ Usage:
 
 To start the app, navigate to this directory and run the following command:
 ```
-prodigy job_ad_sent_cat job_sentences_sample ../../../inputs/labelling/job_sentences.jsonl -F sentence_classifier_recipe.py
+prodigy job_ad_sent_cat job_sentences_sample ../../../inputs/labelling/job_sentences_20240416_10.jsonl -F sentence_classifier_recipe.py
 ```
 
 To export the labelled data locally:
