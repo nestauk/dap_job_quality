@@ -142,12 +142,35 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
     "job_ad_sent_cat",
     dataset=("The dataset to use", "positional", None, str),
     source=("The source data as a .jsonl file", "positional", None, Path),
+    unsegmented=("Don't split sentences", "flag", "U", bool),
 )
-def custom_ner(dataset, source):
+def custom_ner(dataset: str, source: str, unsegmented: bool = False):
     # Initialize the Prodigy stream
     blocks = [{"view_id": "ner_manual"}, {"view_id": "text_input"}]
 
     stream = JSONL(source)
+
+    if not unsegmented:
+        # Custom way to split into chunks of a certain size
+        # its not ideal if these are too big (the model struggles)
+        # or too small (it's hard to label)
+        def split_text(adverts, chunk_size=5):
+            for advert in adverts:
+                text = advert["text"]
+                id = advert["id"]
+                sentences = text.split(".")
+                sentences = [
+                    sentence.strip()
+                    for sentence in sentences
+                    if len(sentence.strip()) != 0
+                ]
+                for sent_id, i in enumerate(range(0, len(sentences), chunk_size)):
+                    yield {
+                        "text": ". ".join(sentences[i : i + chunk_size]),
+                        "meta": {"id": id, "chunk": sent_id},
+                    }
+
+        stream = split_text(list(stream))
 
     # Add tokens to the stream
     stream = add_tokens(nlp, stream)
