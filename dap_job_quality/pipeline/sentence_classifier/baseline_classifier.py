@@ -8,8 +8,12 @@ from sklearn.metrics import (
 )
 import wandb
 
-from dap_job_quality import BUCKET_NAME, logging
+from dap_job_quality import BUCKET_NAME, logging, config
 from dap_job_quality.getters.data_getters import load_s3_data
+
+SEED = config["seed"]
+
+np.random.seed(SEED)
 
 if __name__ == "__main__":
     y_train = load_s3_data(

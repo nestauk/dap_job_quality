@@ -1,1 +1,2 @@
 sentence_model: jjzha/jobbert-base-cased
+seed: 42
