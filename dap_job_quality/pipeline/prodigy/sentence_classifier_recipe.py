@@ -3,12 +3,12 @@ Usage:
 
 To start the app, navigate to this directory and run the following command:
 ```
-prodigy job_ad_sent_cat job_sentences_sample ../../../inputs/labelling/job_sentences_20240416_10.jsonl -F sentence_classifier_recipe.py
+prodigy job_ad_sent_cat job_sentences_sample ../../../inputs/labelling/job_sentences_20240417_10.jsonl -F sentence_classifier_recipe.py
 ```
 
 To export the labelled data locally:
 ```
-prodigy db-out job_sentences_sample > ../../../inputs/labelled/job_sentences_labelled.jsonl
+prodigy db-out job_sentences_sample > ../../../inputs/labelled/job_sentences_labelled_16042024.jsonl
 ```
 
 To delete the database:
@@ -32,6 +32,8 @@ from typing import Iterator
 from dap_job_quality import PROJECT_DIR, BUCKET_NAME, logger
 from dap_job_quality.getters.data_getters import save_to_s3
 from dap_job_quality.utils.spacy_keyword_search import get_matches
+
+import ast
 
 # LOAD SKILLS NER MODEL
 logger.info("Loading NER model...")
@@ -80,7 +82,7 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
         spans = []
         task = copy.deepcopy(eg)
 
-        comp_descs = []
+        # comp_descs = []
         skills_and_benefits = []
         for sent in doc.sents:  # Iterate over sentences
             """
@@ -144,7 +146,7 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
     source=("The source data as a .jsonl file", "positional", None, Path),
     unsegmented=("Don't split sentences", "flag", "U", bool),
 )
-def custom_ner(dataset: str, source: str, unsegmented: bool = False):
+def custom_ner(dataset, source, unsegmented: bool = False):
     # Initialize the Prodigy stream
     blocks = [{"view_id": "ner_manual"}, {"view_id": "text_input"}]
 
@@ -157,7 +159,7 @@ def custom_ner(dataset: str, source: str, unsegmented: bool = False):
         def split_text(adverts, chunk_size=5):
             for advert in adverts:
                 text = advert["text"]
-                id = advert["id"]
+                id = advert["meta"]
                 sentences = text.split(".")
                 sentences = [
                     sentence.strip()
@@ -167,7 +169,7 @@ def custom_ner(dataset: str, source: str, unsegmented: bool = False):
                 for sent_id, i in enumerate(range(0, len(sentences), chunk_size)):
                     yield {
                         "text": ". ".join(sentences[i : i + chunk_size]),
-                        "meta": {"id": id, "chunk": sent_id},
+                        "meta": {"id": advert["meta"]["job_id"], "chunk": sent_id},
                     }
 
         stream = split_text(list(stream))

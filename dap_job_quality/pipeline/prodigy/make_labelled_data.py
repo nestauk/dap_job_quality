@@ -4,10 +4,10 @@ a .jsonl format from which it can be annotated using Prodigy.
 
 if you just want to save the data locally, run:
 
-python dap_job_quality/pipeline/prodigy/make_labelled_data.py -ts 1000
+python dap_job_quality/pipeline/prodigy/make_labelled_data.py -ts 10
 
 if you would also like to save to s3, run:
-python dap_job_quality/pipeline/prodigy/make_labelled_data.py -ts 1000 -s3 True
+python dap_job_quality/pipeline/prodigy/make_labelled_data.py -ts 10 -s3 True
 """
 import plac
 import srsly
@@ -22,6 +22,7 @@ from datetime import datetime
 import os
 
 import json
+import boto3
 
 
 @plac.annotations(
@@ -96,14 +97,22 @@ def make_labelled_data(
 
     if to_s3:
         logger.info("saving labelled data to s3")
+
         s3_path = os.path.join(
             "job_quality",
             "prodigy",
             "labelled_data",
             f"{today_date}_ads_to_label_ts_{str(train_size)}_random_seed_{str(random_seed)}.jsonl",
         )
+
+        """
         # this is NOT being saved as a jsonl file, but as a json file
         save_to_s3(BUCKET_NAME, converted_training_data_jsonl, s3_path)
+        """
+        s3 = boto3.client("s3")
+        s3.put_object(
+            Body=converted_training_data_jsonl, Bucket="open-jobs-lake", Key=s3_path
+        )
 
 
 if __name__ == "__main__":
