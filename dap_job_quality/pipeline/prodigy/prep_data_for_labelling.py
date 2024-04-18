@@ -2,12 +2,12 @@
 This script creates a sub-sample of the OJO data and converts it to
 a .jsonl format from which it can be annotated using Prodigy.
 
-if you just want to save the data locally, run:
+if you just want to save the data locally, navigate to the root project directory run:
 
-python dap_job_quality/pipeline/prodigy/make_labelled_data.py -ts 10
+python dap_job_quality/pipeline/prodigy/prep_data_for_labelling.py -ts
 
-if you would also like to save to s3, run:
-python dap_job_quality/pipeline/prodigy/make_labelled_data.py -ts 10 -s3 True
+if you would also like to save to s3, navigate to the root project directory and run:
+python dap_job_quality/pipeline/prodigy/prep_data_for_labelling.py -ts 500 -s3 True
 """
 import plac
 import srsly
@@ -79,7 +79,7 @@ def make_labelled_data(
 
     # save data locally
     today_date = datetime.today().strftime("%Y-%m-%d").replace("-", "")
-    data_path = PROJECT_DIR / "dap_job_quality/pipeline/prodigy/labelled_data"
+    data_path = PROJECT_DIR / "dap_job_quality/pipeline/prodigy/labelling_data"
     logger.info(
         f"saving labelled data locally of size {train_size} to {data_path} location"
     )

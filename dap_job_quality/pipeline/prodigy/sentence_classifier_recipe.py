@@ -1,15 +1,29 @@
 """
 Usage:
 
+To download data for labelling from S3, navigate to the prodigy directory, and run:
+
+aws s3 cp <input s3 object URL>  ../../../inputs/labelling/<file_name>.jsonl
+
+eg: aws s3 cp s3://open-jobs-lake/job_quality/prodigy/labelling_data/20240418_ads_to_label_ts_500_random_seed_42.jsonl  ../../../inputs/labelling/20240418_ads_to_label_ts_500_random_seed_42.jsonl
+
 To start the app, navigate to this directory and run the following command:
 ```
-prodigy job_ad_sent_cat job_sentences_sample ../../../inputs/labelling/job_sentences_20240417_10.jsonl -F sentence_classifier_recipe.py
-```
+prodigy job_ad_sent_cat job_sentences_sample <file input path> -F sentence_classifier_recipe.py
 
+eg: prodigy job_ad_sent_cat job_sentences_sample ../../../inputs/labelling/20240418_ads_to_label_ts_500_random_seed_42.jsonl -F sentence_classifier_recipe.py
+```
 To export the labelled data locally:
 ```
-prodigy db-out job_sentences_sample > ../../../inputs/labelled/job_sentences_labelled_16042024.jsonl
-```
+prodigy db-out job_sentences_sample > ../../../inputs/labelled/<file_name>.jsonl
+
+eg: prodigy db-out job_sentences_sample > ../../../inputs/labelled/job_sentences_labelled_20240418.jsonl
+
+To save to S3, first export locally, then run:
+
+aws s3 cp   ../../../inputs/labelling/<file_name>.jsonl <output s3 object URL>
+
+eg: aws s3 cp ../../../inputs/labelled/job_sentences_labelled_20240418.jsonl s3://open-jobs-lake/job_quality/prodigy/binary_classifier_labelled_data/20240418/job_sentences_labelled_20240418_local_instance.jsonl
 
 To delete the database:
 ```
