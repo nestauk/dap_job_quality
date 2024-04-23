@@ -4,6 +4,7 @@ from dap_job_quality.utils.text_cleaning import clean_text
 
 import pandas as pd
 import spacy
+import itertools
 from spacy.matcher import PhraseMatcher, Matcher
 import spacy
 from spacy import displacy
@@ -121,3 +122,45 @@ def keyword_search_df(
         slist = get_spans(doc, matches, nlp)
         df.at[index, "spans"] = slist
     return df
+
+
+def get_sentences_on_theme(
+    ojo_df: pd.DataFrame, keywords: list, no_records: int = 1000, theme: str = "ALL"
+):
+    """
+    Get  sentences from the given dataframe on a particular theme, using keyword matching.
+
+    Available themese are: ['L&D', 'TOTAL_PACKAGE', 'HOURS', 'CAREER', 'CONTRACT', 'LEAVE',
+       'FLEX_LOC', 'PERKS', 'FLEX_HOURS', 'SPONSORSHIP']. The keywords relating to each theme can be found in dap_job_quality.utils.keyword_search_patterns
+
+    Function will take 3 minutes, 30 seconds to run on 1000 records.
+
+    Args:
+        ojo_df (pd.DataFrame): DataFrame of ojo sample, containing the 'clean_description' column.
+        keywords (list): List of keyword patterns for the labelled sentences.
+
+    Returns:
+        list: List of sentences containing the keywords relating to the theme.
+    """
+    list_of_matches = []
+
+    for i in range(0, no_records):
+        doc, matches = get_matches(ojo_df["clean_description"][i], keywords)
+        match_dict = {}
+        match_dict["id"] = ojo_df["id"][i]
+        match_dict["doc"] = doc
+        match_dict["matches"] = matches
+        list_of_matches.append(match_dict)
+
+    for i in range(len(list_of_matches)):
+        spans = get_spans(list_of_matches[i]["doc"], list_of_matches[i]["matches"])
+        list_of_matches[i]["spans"] = spans
+
+    match_labels = [i["spans"] for i in list_of_matches]
+
+    filtered_sents = list(itertools.chain.from_iterable(match_labels))
+
+    if not theme == "ALL":
+        filtered_sents = [i["sent"] for i in filtered_sents if i["label"] == theme]
+
+    return filtered_sents
