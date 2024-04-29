@@ -96,7 +96,7 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
         spans = []
         task = copy.deepcopy(eg)
 
-        # comp_descs = []
+        
         skills_and_benefits = []
         for sent in doc.sents:  # Iterate over sentences
             """
