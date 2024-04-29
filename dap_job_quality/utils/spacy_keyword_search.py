@@ -1,5 +1,6 @@
 from dap_job_quality.getters.ojo_getters import get_ojo_sample
 from dap_job_quality.utils.text_cleaning import clean_text
+from dap_job_quality.utils.keyword_search_patterns import keywords
 
 
 import pandas as pd
@@ -16,7 +17,7 @@ matcher = Matcher(nlp.vocab)
 
 def get_matches(
     text: str,
-    patterns: list,
+    patterns: list = keywords,
     matcher: Matcher = matcher,
     nlp: spacy.lang.en.English = nlp,
 ) -> tuple:
