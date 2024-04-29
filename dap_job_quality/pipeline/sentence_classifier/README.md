@@ -2,7 +2,8 @@
 # Sentence classifier pipeline
 
 ## Set up
-Make sure your `.env` file contains a variable called `WANDB_ENTITY`
+* If you want to run the modelling pipeline, make sure your `.env` file contains a variable called `WANDB_ENTITY`
+* To run `generate_dummy_data.py`, you will need to add your OpenAI API key to `.env` as `OPENAI_API_KEY`
 
 ## How to use
 
