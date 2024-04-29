@@ -1,6 +1,8 @@
 from datetime import datetime
+from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pandas as pd
 from pathlib import Path
 from sklearn.decomposition import PCA
@@ -21,9 +23,11 @@ import wandb
 from dap_job_quality import BUCKET_NAME, logging, config, PROJECT_DIR
 from dap_job_quality.getters.data_getters import load_s3_data
 
-SENT_MODEL = config["sentence_model"]
+load_dotenv()
 
+SENT_MODEL = config["sentence_model"]
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/log_reg_confusion_matrix.png"
+WANDB_ENTITY = os.getenv("WANDB_ENTITY")
 
 LOG_REG_PARAMS = {
     "penalty": "l2",
@@ -163,13 +167,14 @@ if __name__ == "__main__":
 
     run = wandb.init(
         project="dap-job-quality",
+        entity=WANDB_ENTITY,
         job_type="Sentence classifier",
         save_code=True,
         tags=[f"logistic_regression"],
     )
 
     # Dimensionality Reduction with PCA
-    pca = PCA(n_components=PCA_VAR)  # retains 95% of the variance
+    pca = PCA(n_components=PCA_VAR)
     X_train_pca = pca.fit_transform(X_train)
     X_val_pca = pca.transform(X_val)
     logging.info(X_train_pca.shape)

@@ -1,4 +1,6 @@
+from dotenv import load_dotenv
 import numpy as np
+import os
 import pandas as pd
 from sklearn.metrics import (
     classification_report,
@@ -11,7 +13,10 @@ import wandb
 from dap_job_quality import BUCKET_NAME, logging, config
 from dap_job_quality.getters.data_getters import load_s3_data
 
+load_dotenv()
+
 SEED = config["seed"]
+WANDB_ENTITY = os.getenv("WANDB_ENTITY")
 
 np.random.seed(SEED)
 
@@ -25,6 +30,7 @@ if __name__ == "__main__":
 
     run = wandb.init(
         project="dap-job-quality",
+        entity=WANDB_ENTITY,
         job_type="Sentence classifier",
         save_code=True,
         tags=[f"baseline_model"],
