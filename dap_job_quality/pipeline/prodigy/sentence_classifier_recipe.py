@@ -174,7 +174,7 @@ def custom_ner(dataset, source, unsegmented: bool = False):
             for advert in adverts:
                 text = advert["text"]
                 id = advert["meta"]["job_id"]
-                sentences = text.split(".")
+                sentences = re.split(r'(?<!\d)\.(?!\d)', text)
                 sentences = [
                     sentence.strip()
                     for sentence in sentences
