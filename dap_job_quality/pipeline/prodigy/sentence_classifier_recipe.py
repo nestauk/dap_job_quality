@@ -149,7 +149,7 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
 
         task["skills_and_benefits"] = skills_and_benefits
         task["spans"] = list(unique_spans)
-        # task["comp_descs"] = comp_descs
+        
 
         yield task
 
