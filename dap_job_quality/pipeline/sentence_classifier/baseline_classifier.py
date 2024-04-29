@@ -17,10 +17,10 @@ np.random.seed(SEED)
 
 if __name__ == "__main__":
     y_train = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_train_dummy.pkl"
+        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_train.pkl"
     )
     y_val = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_val_dummy.pkl"
+        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_val.pkl"
     )
 
     run = wandb.init(
