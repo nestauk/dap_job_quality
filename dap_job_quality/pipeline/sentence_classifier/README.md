@@ -1,5 +1,10 @@
 
-**Sentence classifier pipeline**
+# Sentence classifier pipeline
+
+## Set up
+Make sure your `.env` file contains a variable called `WANDB_ENTITY`
+
+## How to use
 
 The scripts run in this order:
 
@@ -9,5 +14,5 @@ The scripts run in this order:
 
 `log_reg.py`: this embeds the sentences using [jobbert-base-uncased](https://huggingface.co/jjzha/jobbert-base-cased) and trains a logistic regression model. The confusion matrix, false positives and false negatives get logged on weights and biases.
 
-**Other scripts**
+## Other scripts
 `generate_dummy_data.py` - this script generates some made-up job advert sentences using langchain. It uses a few-shot prompting approach. The resulting data is not currently being used, but can be retrieved with the getter `get_dummy_job_sentences()` in `dap_job_quality/getters/labelled_data.py`.
