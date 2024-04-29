@@ -128,7 +128,7 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
 
             contains_keyword = len(get_matches(sent.text)[1]) > 0
             contains_skill_entity = any(ent.label_ == "SKILL" for ent in sent.ents)
-            # is_company_description = comp_desc(sent.text)[0]["label"] == "LABEL_1"
+            
 
             if (
                 contains_keyword
