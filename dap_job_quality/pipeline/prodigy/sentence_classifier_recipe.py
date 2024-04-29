@@ -11,7 +11,9 @@ To start the app, navigate to this directory and run the following command:
 ```
 prodigy job_ad_sent_cat job_sentences_sample <file input path> -F sentence_classifier_recipe.py
 
-eg: prodigy job_ad_sent_cat job_sentences_sample ../../../inputs/labelling/20240418_ads_to_label_ts_500_random_seed_42.jsonl -F sentence_classifier_recipe.py
+eg segmented sentences (important for EC2): prodigy job_ad_sent_cat job_sentences_sample ../../../inputs/labelling/20240418_ads_to_label_ts_500_random_seed_42.jsonl -F sentence_classifier_recipe.py
+
+eg unsegmented sentences: prodigy job_ad_sent_cat unsegmented_sample labelling_data/20240429_ads_to_label_ts_500_random_seed_42.jsonl -U -F sentence_classifier_recipe.py
 ```
 To export the labelled data locally:
 ```
@@ -38,6 +40,7 @@ from pathlib import Path
 import prodigy
 from prodigy.components.loaders import JSONL
 from prodigy.components.preprocess import add_tokens
+import re
 import spacy
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from transformers import pipeline
@@ -96,7 +99,6 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
         spans = []
         task = copy.deepcopy(eg)
 
-        
         skills_and_benefits = []
         for sent in doc.sents:  # Iterate over sentences
             """
@@ -128,13 +130,8 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
 
             contains_keyword = len(get_matches(sent.text)[1]) > 0
             contains_skill_entity = any(ent.label_ == "SKILL" for ent in sent.ents)
-            
 
-            if (
-                contains_keyword
-                and not contains_skill_entity
-                
-            ):
+            if contains_keyword and not contains_skill_entity:
                 spans.append(make_span_dict(start, end, token_start, token_end, sent))
             else:
                 for ent in sent.ents:
@@ -149,7 +146,6 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
 
         task["skills_and_benefits"] = skills_and_benefits
         task["spans"] = list(unique_spans)
-        
 
         yield task
 
@@ -174,7 +170,7 @@ def custom_ner(dataset, source, unsegmented: bool = False):
             for advert in adverts:
                 text = advert["text"]
                 id = advert["meta"]["job_id"]
-                sentences = re.split(r'(?<!\d)\.(?!\d)', text)
+                sentences = re.split(r"(?<!\d)\.(?!\d)", text)
                 sentences = [
                     sentence.strip()
                     for sentence in sentences
