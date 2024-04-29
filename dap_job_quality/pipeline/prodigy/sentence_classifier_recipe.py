@@ -173,7 +173,7 @@ def custom_ner(dataset, source, unsegmented: bool = False):
         def split_text(adverts, chunk_size=5):
             for advert in adverts:
                 text = advert["text"]
-                id = advert["meta"]
+                id = advert["meta"]["job_id"]
                 sentences = text.split(".")
                 sentences = [
                     sentence.strip()
