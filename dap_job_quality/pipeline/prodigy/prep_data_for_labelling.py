@@ -101,7 +101,7 @@ def make_labelled_data(
         s3_path = os.path.join(
             "job_quality",
             "prodigy",
-            "labelled_data",
+            "labelling_data",
             f"{today_date}_ads_to_label_ts_{str(train_size)}_random_seed_{str(random_seed)}.jsonl",
         )
 
