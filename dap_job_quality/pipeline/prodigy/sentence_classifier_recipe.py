@@ -133,7 +133,7 @@ def make_tasks(nlp: spacy.language.Language, stream: Iterator[dict]) -> Iterator
             if (
                 contains_keyword
                 and not contains_skill_entity
-                # and not is_company_description
+                
             ):
                 spans.append(make_span_dict(start, end, token_start, token_end, sent))
             else:
