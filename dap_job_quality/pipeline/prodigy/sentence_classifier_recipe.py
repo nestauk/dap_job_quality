@@ -183,7 +183,7 @@ def custom_ner(dataset, source, unsegmented: bool = False):
                 for sent_id, i in enumerate(range(0, len(sentences), chunk_size)):
                     yield {
                         "text": ". ".join(sentences[i : i + chunk_size]),
-                        "meta": {"id": advert["meta"]["job_id"], "chunk": sent_id},
+                        "meta": {"id": id, "chunk": sent_id},
                     }
 
         stream = split_text(list(stream))
