@@ -32,21 +32,42 @@ python -m pip install prodigy -f https://XXXX-XXXX-XXXX-XXXX@download.prodi.gy
 
 where `XXXX-XXXX-XXXX-XXXX` is the prodigy license key.
 
-To run the custom prodigy instance (in the `prodigy` directory), run:
+To download data for labelling in prodigy (generated and saved to s3 using prep_data_for_labelling.py), run:
 
 ```
-prodigy benefits_classification job_quality_annotated \
-    ./labelled_data/YYYYMMDD_ads_to_label_ts_1000_random_seed_42.jsonl \
-    -F custom_recipe.py
-```
-
-To save the outputs of the labelling exercise locally and to s3, run:
+aws s3 cp <input s3 object URL>  ../../../inputs/labelling/<file_name>.jsonl
 
 ```
-prodigy db-out job_quality_annotated > ./labelled_data/20240117_ads_labelled.jsonl
-aws s3 cp ./labelled_data/20240117_ads_labelled.jsonl s3://open-jobs-lake/job_quality/prodigy/labelled_data/20240117_ads_labelled.jsonl
+
+eg:
+
+```
+aws s3 cp s3://open-jobs-lake/job_quality/prodigy/labelling_data/20240418_ads_to_label_ts_500_random_seed_42.jsonl  ../../../inputs/labelling/20240418_ads_to_label_ts_500_random_seed_42.json
+```
+
+To run the custom prodigy instance (in the `prodigy` directory) for labelling benefits/ not benefits, navigate to dap_job_quality/pipeline/prodigy and run:
+
+```
+prodigy job_ad_sent_cat job_sentences_sample <input file> -F sentence_classifier_recipe.py
+
+```
+
+To export the labelled data locally, run:
+
+```
+
+prodigy db-out job_sentences_sample > ../../../inputs/labelled/<file_name>.jsonl
+
+```
+
+To save to S3, first export locally, then run:
+
+```
+
+aws s3 cp   ../../../inputs/labelling/<file_name>.jsonl <output s3 object URL>
+
 ```
 
 ### Labelling guidelines
 
-We're trying to see **which dimensions of job quality we can extract from job ads**. We've mapped out the different possible dimensions and would like to assess the feasibility of extracting these dimensions from job ads. Please [refer to the tentative feasibility matrix for entity definitions.](https://docs.google.com/document/d/1b57AuyA00FdNo1AkiB4Ne_KhUBi0uyPUuQd9bBQsC4Q/edit?usp=sharing)
+We're currently building a binary classifier capture a broad range of job quality dimensions> The labellign guide is saved here (access for those internal to Nesta only) (https://docs.google.com/document/d/1c2chL5qUAZ244VwN_p9lv50p6uyWuN-imt36tP55tc0/edit?usp=drive_link)

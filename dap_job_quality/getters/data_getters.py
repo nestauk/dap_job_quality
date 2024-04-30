@@ -3,6 +3,7 @@ from botocore.exceptions import NoCredentialsError, ClientError
 from decimal import Decimal
 from fnmatch import fnmatch
 import gzip
+from io import BytesIO
 import json
 import numpy
 import os
@@ -143,6 +144,11 @@ def save_to_s3(bucket_name: str, output_var, output_file_dir: str):
         obj.put(Body=gzip.compress(json.dumps(output_var).encode()))
     elif fnmatch(output_file_dir, "*.txt"):
         obj.put(Body=output_var)
+    elif fnmatch(output_file_dir, "*.npy"):
+        buffer = BytesIO()
+        numpy.save(buffer, output_var)
+        buffer.seek(0)  # Move the cursor to the beginning of the buffer
+        obj.put(Body=buffer.getvalue())
     else:
         obj.put(Body=json.dumps(output_var, cls=CustomJsonEncoder))
 
@@ -245,8 +251,12 @@ def load_s3_data(bucket_name: str, file_name: str):
     elif fnmatch(file_name, "*.parquet"):
         return pd.read_parquet("s3://" + bucket_name + "/" + file_name)
     elif fnmatch(file_name, "*.pkl") or fnmatch(file_name, "*.pickle"):
-        file = obj.get()["Body"].read().decode()
-        return pickle.loads(file)
+        with obj.get()["Body"] as f:
+            return pickle.load(f)
+    elif fnmatch(file_name, "*.npy"):
+        # Load the .npy file directly from the S3 object
+        with obj.get()["Body"] as f:
+            return numpy.load(f)
     else:
         logger.error(
             'Function not supported for file type other than "*.csv", "*.parquet", "*.jsonl.gz", "*.jsonl", or "*.json"'

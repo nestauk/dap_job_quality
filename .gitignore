@@ -127,3 +127,6 @@ node_modules/
 
 #Prodigy data
 *.jsonl
+
+# wandb stuff
+wandb/
