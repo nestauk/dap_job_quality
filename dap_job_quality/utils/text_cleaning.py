@@ -11,7 +11,7 @@ from typing import List, Tuple
 
 # Pattern for fixing a missing space between enumerations, for
 # split_sentences()
-compiled_missing_space_pattern = re.compile("([a-z])([A-Z])")
+compiled_missing_space_pattern = re.compile("([a-z])([A-Z0-9])")
 # Characters outside these rules will be padded, for pad_punctuation()
 compiled_nonalphabet_nonnumeric_pattern = re.compile(r"([^a-zA-Z0-9] )")
 
@@ -75,13 +75,26 @@ def detect_camelcase(text):
 punctuation_replacement_rules = {
     # old patterns: replacement pattern
     # Convert bullet points to fullstops
-    "[\u2022\u2023\u25E6\u2043\u2219*]": ".",
+    "[\u2022\u2023\u25E6\u2043\u2219*]": ". ",
     r"[/:\\]": " ",  # Convert colon, forward and backward slashes to spaces
 }
 
 compiled_punct_patterns = {
     re.compile(p): v for p, v in punctuation_replacement_rules.items()
 }
+
+
+def split_on_period_space(text):
+    """
+    A spaCy pipeline component that inserts a space after a period if the period is followed by an uppercase letter or digit
+    without any intervening space, as long it is not preceded by a digit or the pound sign.
+    """
+    pattern = re.compile(r"(?<![\d£])\.([A-Z\d])")
+
+    # Transform the text by inserting a space where necessary
+    new_text = pattern.sub(r". \1", text)
+
+    return new_text
 
 
 def replacements(text):
@@ -118,7 +131,7 @@ def clean_text(text: str) -> List[str]:
     Returns:
         List[str]: List of cleaned job description sentences
     """
-    return pipe(text, detect_camelcase, replacements)
+    return pipe(text, detect_camelcase, replacements, split_on_period_space)
 
 
 def split_sentences(text: str) -> List[str]:
