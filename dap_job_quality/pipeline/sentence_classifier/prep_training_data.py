@@ -1,83 +1,83 @@
-from datetime import date
-import json
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from transformers import AutoTokenizer, AutoModel
-import torch
-from typing import List
+import spacy
 
 from dap_job_quality import PROJECT_DIR, config, BUCKET_NAME
-from dap_job_quality.getters.labelled_data import get_dummy_job_sentences
+from dap_job_quality.getters.labelled_data import get_labelled_job_sentences
 from dap_job_quality.getters.data_getters import save_to_s3
+from dap_job_quality.utils import prodigy_data_utils as pdu
 
-SENT_MODEL = config["sentence_model"]
-SEED = 42
+nlp = spacy.load("en_core_web_sm")
 
-
-# Mean Pooling - Take attention mask into account for correct averaging
-def mean_pooling(model_output, attention_mask):
-    token_embeddings = model_output[
-        0
-    ]  # First element of model_output contains all token embeddings
-    input_mask_expanded = (
-        attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    )
-    sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
-    sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-    return sum_embeddings / sum_mask
+SEED = config["seed"]
 
 
-def embed_sentences(
-    sentences: List[str], model_name: str = SENT_MODEL
-) -> List[torch.Tensor]:
-    """
-    Generate embeddings for each sentence in a list of sentences using a specified model.
+def get_negative_example_sentences(df):
+    # Find all unique texts
+    unique_texts = df["text"].unique()
 
-    Follows the method described here: https://www.sbert.net/examples/applications/computing-embeddings/README.html
+    # Split unique texts into sentences
+    all_sentences_from_text = set()
+    for text in unique_texts:
+        doc = nlp(text)
+        all_sentences_from_text.update([sent.text for sent in doc.sents])
 
-    Args:
-        sentences (List[str]): A list of sentences to be embedded.
-        model_name (str): The name of the model to use for generating embeddings. Default
-                          is a globally defined variable `SENT_MODEL`.
+    # Set of sentences already in the 'sentence' column
+    existing_sentences = set(df["sentence"])
 
-    Returns:
-        List[torch.Tensor]: A list of tensors where each tensor represents the embedding
-                            of a corresponding sentence in the input list.
-    """
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModel.from_pretrained(model_name)
+    # Find sentences that are not in the 'sentence' column
+    new_sentences = all_sentences_from_text - existing_sentences
 
-    # Tokenize sentences
-    encoded_input = tokenizer(
-        sentences, padding=True, truncation=True, max_length=512, return_tensors="pt"
-    )
+    return new_sentences
 
-    # Compute token embeddings
-    with torch.no_grad():
-        model_output = model(**encoded_input)
 
-    # Perform pooling. In this case, mean pooling
-    embeddings = mean_pooling(model_output, encoded_input["attention_mask"])
+def filter_job_ads(labelled_df):
+    job_ids = labelled_df["id"].unique()
 
-    return embeddings
+    # skip the first 10 job ads - we didn't know what we were labelling at that point
+    target_ids = job_ids[10:]
+
+    labelled_df_clean = labelled_df[labelled_df["id"].isin(target_ids)]
+    # get rid of empty spans
+    labelled_df_clean = labelled_df_clean[labelled_df_clean["span"] != ""]
+    return labelled_df_clean
 
 
 if __name__ == "__main__":
-    data = get_dummy_job_sentences()
+    labelled_data = get_labelled_job_sentences()[
+        0
+    ]  # all entries are the first item in the list
+    labelled_data = pdu.get_spans_and_sentences(labelled_data)
 
-    sent_df = pd.DataFrame(data)
+    labelled_df = pd.DataFrame(columns=["span", "sent", "text", "job_id"])
 
-    sent_df_filtered = sent_df[sent_df["label"] != -1]
+    for key in labelled_data.keys():
+        temp_df = pd.DataFrame(labelled_data[key])
+        temp_df["id"] = int(key)
+        labelled_df = pd.concat([labelled_df, temp_df])
 
-    embeddings = embed_sentences(sent_df_filtered["sentence"].tolist())
+    labelled_df = labelled_df.drop(["job_id"], axis=1)
 
-    sent_df_filtered["embeddings"] = embeddings.tolist()
+    labelled_df_clean = filter_job_ads(labelled_df)
+
+    labelled_df_clean["sentence"] = labelled_df_clean["sent"].apply(lambda x: x.text)
+
+    negative_sentences = get_negative_example_sentences(labelled_df_clean)
+
+    negative_df = pd.DataFrame(list(negative_sentences))
+    negative_df["label"] = 0
+    negative_df.columns = ["span", "label"]
+
+    positive_df = labelled_df_clean[["span"]]
+    positive_df["label"] = 1
+
+    training_ml_df = pd.concat([positive_df, negative_df])
 
     # Splitting the dataset into training, validation, and test sets
     X_train, X_temp, y_train, y_temp = train_test_split(
-        sent_df_filtered["embeddings"].tolist(),
-        sent_df_filtered["label"],
+        training_ml_df.drop(["label"], axis=1),
+        training_ml_df["label"],
         test_size=0.4,
         random_state=SEED,
     )
@@ -92,5 +92,5 @@ if __name__ == "__main__":
         save_to_s3(
             BUCKET_NAME,
             data,
-            f"job_quality/sentence_classifier/inputs/labelled/{name}_dummy.pkl",
+            f"job_quality/sentence_classifier/inputs/labelled/{name}.pkl",
         )
