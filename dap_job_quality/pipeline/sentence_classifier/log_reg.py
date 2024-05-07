@@ -150,8 +150,8 @@ if __name__ == "__main__":
 
     X_val_df = X_val.copy()
 
-    X_train = X_train["span"].tolist()
-    X_val = X_val["span"].tolist()
+    X_train = X_train["sentence"].tolist()
+    X_val = X_val["sentence"].tolist()
 
     scaler = StandardScaler()
 
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     )
 
     # Dimensionality Reduction with PCA
-    pca = PCA(n_components=PCA_VAR)
+    pca = PCA(n_components=PCA_VAR, random_state=LOG_REG_PARAMS["random_state"])
     X_train_pca = pca.fit_transform(X_train)
     X_val_pca = pca.transform(X_val)
     logging.info(X_train_pca.shape)
