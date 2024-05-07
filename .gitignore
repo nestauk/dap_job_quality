@@ -110,6 +110,7 @@ target/
 /outputs/models/*
 /outputs/figures/*
 !/outputs/models/*.md
+/outputs/*.csv
 
 # Mac OS-specific storage files
 .DS_Store
