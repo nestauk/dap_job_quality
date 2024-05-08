@@ -84,9 +84,9 @@ compiled_punct_patterns = {
 }
 
 
-def split_on_period_space(text):
+def split_on_period_space(text: str):
     """
-    A spaCy pipeline component that inserts a space after a period if the period is followed by an uppercase letter or digit
+    Inserts a space after a period if the period is followed by an uppercase letter or digit
     without any intervening space, as long it is not preceded by a digit or the pound sign.
     """
     pattern = re.compile(r"(?<![\d£])\.([A-Z\d])")
