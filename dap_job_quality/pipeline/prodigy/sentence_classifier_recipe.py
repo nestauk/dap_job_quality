@@ -200,5 +200,11 @@ def custom_ner(dataset, source, unsegmented: bool = False):
                 "benefit",
             ],
             "blocks": blocks,
+            # If feed_overlap is True, the same example can be sent out to multiple users at the same time
+            "feed_overlap": False,
+            # Port to run the server on
+            "port": 8080,
+            # Important to set host to 0.0.0.0 when running on ec2
+            "host": "0.0.0.0",
         },
     }
