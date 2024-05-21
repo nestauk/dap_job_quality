@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import spacy
 
-from dap_job_quality import PROJECT_DIR, config, BUCKET_NAME
+from dap_job_quality import PROJECT_DIR, config, BUCKET_NAME, logging
 from dap_job_quality.getters.labelled_data import get_labelled_job_sentences
 from dap_job_quality.getters.data_getters import save_to_s3
 from dap_job_quality.utils import prodigy_data_utils as pdu
@@ -67,10 +67,12 @@ if __name__ == "__main__":
 
     negative_df = pd.DataFrame(list(negative_sentences))
     negative_df["label"] = 0
-    negative_df.columns = ["span", "label"]
+    negative_df.columns = ["sentence", "label"]
+    logging.info(negative_df.head())
 
-    positive_df = labelled_df_clean[["span"]]
+    positive_df = labelled_df_clean[["sentence"]]
     positive_df["label"] = 1
+    logging.info(positive_df.head())
 
     training_ml_df = pd.concat([positive_df, negative_df])
 
