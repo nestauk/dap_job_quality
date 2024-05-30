@@ -23,7 +23,7 @@ def get_labelled_job_sentences():
     """
     return load_s3_jsonl(
         BUCKET_NAME,
-        s3_file_name="job_quality/prodigy/binary_classifier_labelled_data/20240416/job_sentences_labelled_20240416.jsonl",
+        s3_file_name="job_quality/prodigy/labelled_data/job_sentences_labelled_20240528.jsonl",
         local_file=PROJECT_DIR
-        / f"inputs/labelled/job_sentences_labelled_20240416.jsonl",
+        / f"inputs/labelled/job_sentences_labelled_20240509.jsonl",
     )

@@ -30,7 +30,8 @@ def read_accepted_lines(file: str) -> List[Dict[str, Any]]:
 
 
 def get_spans_and_sentences(
-    records: List[Dict[str, Any]]
+    records: List[Dict[str, Any]],
+    chunks=True,
 ) -> Dict[str, List[Dict[str, Any]]]:
     """
     Processes annotated records to extract labelled spans of text, their labels and the whole sentences in which they occur.
@@ -49,8 +50,14 @@ def get_spans_and_sentences(
         # Determine the correct job_id location
         # Some of the data we have has a nested dictionary called "meta", others have a top-level key called "id"
         job_id = (
-            record.get("id") if "id" in record else record.get("meta", {}).get("job_id")
+            record.get("id") if "id" in record else record.get("meta", {}).get("id")
         )
+
+        if job_id not in training_data.keys():
+            training_data[job_id] = {}
+
+        if chunks:
+            chunk = record.get("meta", {}).get("chunk")
 
         # Check if job_id exists, if not, skip the record or handle it as needed
         if not job_id:
@@ -80,6 +87,9 @@ def get_spans_and_sentences(
             spans_parsed.append(
                 {"span": "", "sent": "", "label": "none", "text": record["text"]}
             )
-        training_data[job_id] = spans_parsed
+        if chunks:
+            training_data[job_id][chunk] = spans_parsed
+        else:
+            training_data[job_id] = spans_parsed
 
     return training_data
