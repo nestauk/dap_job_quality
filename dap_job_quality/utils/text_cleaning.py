@@ -108,6 +108,7 @@ def replacements(text):
     text = (
         text.replace("&", "and")
         .replace("\xa0", " ")
+        .replace("\r", ".")
         .replace("\n", ".")
         .replace("[", "")
         .replace("]", "")

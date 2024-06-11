@@ -1,3 +1,8 @@
+"""
+Usage:
+
+
+"""
 import pytest
 from dap_job_quality.utils.text_cleaning import (
     clean_text,
@@ -38,6 +43,22 @@ def test_clean_text_preserve_exceptions():
     assert (
         clean_text(text) == expected_result
     ), "Failed to preserve camelcase exceptions."
+
+
+def test_clean_text_bullets():
+    text = ";• managing the grants database;• preparing financial and interna"
+    expected_result = (
+        ";.  managing the grants database;.  preparing financial and interna"
+    )
+    assert (
+        clean_text(text) == expected_result
+    ), "Failed to replace bullet points with full stops."
+
+
+def test_clean_text_remove_newline():
+    text = "- £100 a day \n - 3 month contract"
+    expected_result = "- £100 a day . - 3 month contract"
+    assert clean_text(text) == expected_result, "Failed to remove newline characters."
 
 
 # def test_clean_text_with_compound_case():
