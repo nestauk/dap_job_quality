@@ -1,6 +1,7 @@
 """
 Functions to minimally clean job advertisements.
 """
+
 from hashlib import md5
 import nltk
 from nltk.corpus import stopwords
@@ -122,15 +123,15 @@ def replacements(text):
 
 def clean_text(text: str) -> List[str]:
     """Clean a job description by:
-        - detecting camelcase
-        - replacing punctuation
-        - splitting into sentences
+            - detecting camelcase
+            - replacing punctuation
+            - splitting into sentences
 
     Args:
-        text (str): job description
+            text (str): job description
 
     Returns:
-        List[str]: List of cleaned job description sentences
+            List[str]: List of cleaned job description sentences
     """
     return pipe(text, detect_camelcase, replacements, split_on_period_space)
 
@@ -139,13 +140,13 @@ def split_sentences(text: str) -> List[str]:
     """Splits job adverts into sentences.
 
     Splits on:
-        - .?!
+            - .?!
 
     Args:
-        text str: job advert
+            text str: job advert
 
     Returns:
-        List[str]: A list of sentences
+            List[str]: A list of sentences
     """
     # split phrases on .?!
     pattern = re.compile(r"([.?!])\s*")
@@ -159,10 +160,10 @@ def short_hash(text: str) -> int:
     """Create a short hash from a string
 
     Args:
-        text (str): string to hash
+            text (str): string to hash
 
     Returns:
-        int: short hash
+            int: short hash
     """
 
     hx_code = md5(text.encode()).hexdigest()
@@ -183,11 +184,11 @@ def tokenize(text: str, n: int = 2) -> List[Tuple[str, ...]]:
     #TODO: remove the `.isalpha()` part because it conflicts with the functions called as part of `clean_text()`
 
     Args:
-        text (str): The text to be tokenized.
-        n (int): The number of elements in each n-gram (default is 2).
+            text (str): The text to be tokenized.
+            n (int): The number of elements in each n-gram (default is 2).
 
     Returns:
-        List[Tuple[str, ...]]: A list of n-grams, where each n-gram is represented as a tuple of strings.
+            List[Tuple[str, ...]]: A list of n-grams, where each n-gram is represented as a tuple of strings.
     """
     tokens = nltk.word_tokenize(text)
     tokens = [
