@@ -5,6 +5,7 @@ import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
+import pickle
 from sklearn.decomposition import PCA
 from sklearn.metrics import (
     classification_report,
@@ -135,6 +136,7 @@ def record_errors(
 
 
 if __name__ == "__main__":
+    logging.info("Loading data...")
     X_train = load_s3_data(
         BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/X_train.pkl"
     )
@@ -165,6 +167,7 @@ if __name__ == "__main__":
     X_val = np.vstack(X_val)
     X_val = scaler.transform(X_val)
 
+    logging.info("Initialising weights and biases run...")
     run = wandb.init(
         project="dap-job-quality",
         entity=WANDB_ENTITY,
@@ -174,8 +177,12 @@ if __name__ == "__main__":
     )
 
     # Dimensionality Reduction with PCA
+    logging.info("Reducing dimensionality with PCA...")
     pca = PCA(n_components=PCA_VAR, random_state=LOG_REG_PARAMS["random_state"])
     X_train_pca = pca.fit_transform(X_train)
+    pickle.dump(
+        pca, open(PROJECT_DIR / "outputs/models/sentence_classifier/pca.pkl", "wb")
+    )
     X_val_pca = pca.transform(X_val)
     logging.info(X_train_pca.shape)
 
@@ -186,9 +193,18 @@ if __name__ == "__main__":
         random_state=LOG_REG_PARAMS["random_state"],
         max_iter=LOG_REG_PARAMS["max_iter"],
     )
+    logging.info("Fitting a logistic regression model...")
     model.fit(X_train_pca, y_train)
+    pickle.dump(
+        model,
+        open(
+            PROJECT_DIR / "outputs/models/sentence_classifier/logistic_regression.pkl",
+            "wb",
+        ),
+    )
 
     # Evaluate the model on the validation set
+    logging.info("Making predictions...")
     y_pred = model.predict(X_val_pca)
     logging.info(classification_report(y_val, y_pred))
 
@@ -209,6 +225,7 @@ if __name__ == "__main__":
     wb_confusion_matrix = wandb.Table(data=cm_df, columns=["0", "1"])
     run.log({"confusion_matrix": wb_confusion_matrix})
 
+    logging.info("Recording errors...")
     record_errors(
         X_val_df,
         y_val,
