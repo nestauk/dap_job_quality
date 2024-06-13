@@ -146,6 +146,7 @@ if __name__ == "__main__":
     y_train = load_s3_data(
         BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_train.pkl"
     )
+    y_train_writeable = np.copy(y_train)
     y_val = load_s3_data(
         BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_val.pkl"
     )
@@ -194,7 +195,7 @@ if __name__ == "__main__":
         max_iter=LOG_REG_PARAMS["max_iter"],
     )
     logging.info("Fitting a logistic regression model...")
-    model.fit(X_train_pca, y_train)
+    model.fit(X_train_pca, y_train_writeable)
     pickle.dump(
         model,
         open(
