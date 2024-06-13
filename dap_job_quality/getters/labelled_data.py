@@ -25,5 +25,5 @@ def get_labelled_job_sentences():
         BUCKET_NAME,
         s3_file_name="job_quality/prodigy/labelled_data/job_sentences_labelled_20240528.jsonl",
         local_file=PROJECT_DIR
-        / f"inputs/labelled/job_sentences_labelled_20240509.jsonl",
+        / f"inputs/labelled/job_sentences_labelled_20240528.jsonl",
     )
