@@ -29,6 +29,11 @@ def sentence_classifier_lr():
     file_key = "job_quality/sentence_classifier/outputs/logistic_regression.pkl"
 
     local_file_name = "outputs/models/sentence_classifier/logistic_regression.pkl"
+
+    local_dir = os.path.dirname(local_file_name)
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+
     s3.download_file(BUCKET_NAME, file_key, local_file_name)
 
     # Load the model using pickle
