@@ -107,9 +107,11 @@ target/
 !/inputs/*.md
 /outputs/data/*
 !/outputs/data/*.md
-/outputs/models/*
+/outputs/models/sentence_classifier/*
+/outputs/models/ner_model/*
 /outputs/figures/*
 !/outputs/models/*.md
+!/outputs/models/sentence_classifier/*.md
 /outputs/*.csv
 
 # Mac OS-specific storage files
