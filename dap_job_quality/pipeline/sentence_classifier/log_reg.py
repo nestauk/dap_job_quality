@@ -22,7 +22,7 @@ from typing import List, Union, Optional
 import wandb
 
 from dap_job_quality import BUCKET_NAME, logging, config, PROJECT_DIR
-from dap_job_quality.getters.data_getters import load_s3_data
+from dap_job_quality.getters.data_getters import load_s3_data, save_to_s3
 
 load_dotenv()
 
@@ -187,6 +187,7 @@ if __name__ == "__main__":
     pickle.dump(
         pca, open(PROJECT_DIR / "outputs/models/sentence_classifier/pca.pkl", "wb")
     )
+    save_to_s3(BUCKET_NAME, pca, "job_quality/sentence_classifier/outputs/pca.pkl")
     X_val_pca = pca.transform(X_val)
     logging.info(X_train_pca.shape)
 
@@ -205,6 +206,11 @@ if __name__ == "__main__":
             PROJECT_DIR / "outputs/models/sentence_classifier/logistic_regression.pkl",
             "wb",
         ),
+    )
+    save_to_s3(
+        BUCKET_NAME,
+        model,
+        "job_quality/sentence_classifier/outputs/logistic_regression.pkl",
     )
 
     # Evaluate the model on the validation set
