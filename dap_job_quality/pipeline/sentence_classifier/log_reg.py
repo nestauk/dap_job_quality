@@ -54,7 +54,7 @@ def mean_pooling(model_output, attention_mask):
 
 
 def embed_sentences(
-    sentences: List[str], model_name: str = SENT_MODEL
+    sentences: List[str], model_name: str = SENT_MODEL, batch_size: int = 32
 ) -> List[torch.Tensor]:
     """
     Generate embeddings for each sentence in a list of sentences using a specified model.
@@ -73,19 +73,22 @@ def embed_sentences(
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name)
 
-    # Tokenize sentences
-    encoded_input = tokenizer(
-        sentences, padding=True, truncation=True, max_length=512, return_tensors="pt"
-    )
+    embeddings = []
+    for i in range(0, len(sentences), batch_size):
+        batch = sentences[i : i + batch_size]
+        encoded_input = tokenizer(
+            batch, padding=True, truncation=True, max_length=512, return_tensors="pt"
+        )
 
-    # Compute token embeddings
-    with torch.no_grad():
-        model_output = model(**encoded_input)
+        # Compute token embeddings
+        with torch.no_grad():
+            model_output = model(**encoded_input)
 
-    # Perform pooling. In this case, mean pooling
-    embeddings = mean_pooling(model_output, encoded_input["attention_mask"])
+        # Perform pooling. In this case, mean pooling
+        batch_embeddings = mean_pooling(model_output, encoded_input["attention_mask"])
+        embeddings.append(batch_embeddings)
 
-    return embeddings
+    return torch.cat(embeddings, dim=0)
 
 
 def record_errors(
