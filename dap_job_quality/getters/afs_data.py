@@ -1,3 +1,5 @@
+import pandas as pd
+
 from dap_job_quality.getters.data_getters import load_s3_data
 from dap_job_quality import BUCKET_NAME
 
@@ -8,3 +10,18 @@ def get_eyp_ads():
 
 def get_sim_occ_ads():
     return load_s3_data(BUCKET_NAME, "job_quality/early_years/sim_occs_job_ads.parquet")
+
+
+def get_ngrams_and_matches() -> pd.DataFrame:
+    """
+    Unique ngrams that occurred in a sample of 27,772 sentences that were identified as being
+    about job quality. These were taken from a sample of 83,150 job ads from 2023,
+    covering EYP and similar occupations.
+
+    Returns:
+        pd.DataFrame: Dataframe with the columns ['ngrams', 'target_phrase', 'cosine_similarity']
+    """
+    return load_s3_data(
+        BUCKET_NAME,
+        "job_quality/early_years/jq_sentences/unique_ngrams_2023_matched.parquet",
+    )
