@@ -1,3 +1,4 @@
+import nltk
 from nltk.tokenize import sent_tokenize
 import pandas as pd
 
@@ -6,12 +7,13 @@ from dap_job_quality.getters.afs_data import get_eyp_ads, get_sim_occ_ads
 from dap_job_quality.getters.data_getters import save_to_s3
 from dap_job_quality.utils import jobbert
 
+nltk.download("punkt")
+nltk.download("stopwords")
+
 # Load BERT model and tokenizer
 JOBBERT = config["sentence_model"]
 
 if __name__ == "__main__":
-    print("Hello, world!")
-
     # Load and concat data
     eyp = get_eyp_ads()
     sim_occs = get_sim_occ_ads()
