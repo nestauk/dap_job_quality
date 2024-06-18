@@ -34,7 +34,9 @@ if __name__ == "__main__":
 
     # Add an identifier column
     all_job_ads.reset_index(inplace=True)
-    all_job_ads["identifier"] = all_job_ads["id"] + "_" + all_job_ads["index"]
+    all_job_ads["identifier"] = (
+        all_job_ads["id"].astype(str) + "_" + all_job_ads["index"].astype(str)
+    )
 
     ad_embeddings = jobbert.embed_sentences(
         all_job_ads["sentences"].tolist(), JOBBERT, 64
