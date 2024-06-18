@@ -1,5 +1,6 @@
 import boto3
 import numpy as np
+import os
 import pandas as pd
 import torch
 
@@ -22,6 +23,9 @@ THRESHOLD = 0.3
 
 
 def download_from_s3(bucket_name, object_name, file_name):
+    # Create parent directories if they do not exist
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+
     s3_client = boto3.client("s3")
     s3_client.download_file(bucket_name, object_name, file_name)
 
