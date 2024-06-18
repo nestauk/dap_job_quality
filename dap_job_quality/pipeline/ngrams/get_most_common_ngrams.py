@@ -1,124 +1,84 @@
 from collections import Counter
+import nltk
 from nltk import ngrams
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import sent_tokenize
 import pandas as pd
 
-from dap_job_quality import BUCKET_NAME, PROJECT_DIR
+from dap_job_quality import BUCKET_NAME, PROJECT_DIR, logging
 from dap_job_quality.getters.data_getters import load_s3_jsonl
+from dap_job_quality.getters.afs_data import get_eyp_ads, get_sim_occ_ads
 from dap_job_quality.utils import prodigy_data_utils as pdu
 from dap_job_quality.utils import text_cleaning as tc
+
+nltk.download("punkt")
+nltk.download("stopwords")
 
 stop_words = set(stopwords.words("english"))
 lemmatizer = WordNetLemmatizer()
 
+SAMPLE_SIZE = "all"
+TOP_N = 200
+
 
 def get_most_common_n_grams(
-    texts_list: list, top_n: int = 100, ngram_range=range(2, 6)
+    texts_list: list, top_n: int = TOP_N, ngram_range=range(2, 7)
 ) -> dict:
     """
     Get top_n most common ngrams from a list of texts
     """
+    results = {n: Counter() for n in ngram_range}
 
-    # Slightly clean and combine all texts in a list into a big string
-    combined_texts = ""
+    # Process each text one by one
     for topic_text in texts_list:
-        # tweet_text = re.sub(r'[^\w\s]','',topic_text).lower()
-        combined_texts = combined_texts + " " + topic_text.lower()
-
-    # Calculate most common ngrams for a few different n
-    results = {}
-    for n in ngram_range:
-        combined_texts_list = combined_texts.split()
+        topic_text = topic_text.lower()
+        combined_texts_list = topic_text.split()
         combined_texts_list = [
             lemmatizer.lemmatize(word)
-            for word in combined_texts_list
-            if word not in stop_words
+            for word in combined_texts_list  # if word not in stop_words
         ]
-        found_grams = ngrams(combined_texts_list, n)
-        all_grams = []
-        for grams in found_grams:
-            all_grams.append(" ".join(grams))
-        results[n] = [
-            (a, b, round(b / len(all_grams), 6))
-            for a, b in Counter(all_grams).most_common(top_n)
+
+        # Generate n-grams and update counters
+        for n in ngram_range:
+            found_grams = ngrams(combined_texts_list, n)
+            results[n].update(" ".join(grams) for grams in found_grams)
+
+    # Get the most common n-grams
+    final_results = {}
+    for n in ngram_range:
+        total_ngrams = sum(results[n].values())
+        final_results[n] = [
+            (a, b, round(b / total_ngrams, 3)) for a, b in results[n].most_common(top_n)
         ]
-    return results
 
-
-def get_clean_sentences():
-    labelled_sents1 = load_s3_jsonl(
-        BUCKET_NAME,
-        s3_file_name="job_quality/prodigy/binary_classifier_labelled_data/20240416/job_sentences_labelled_20240416.jsonl",
-        local_file=PROJECT_DIR
-        / f"inputs/labelled/job_sentences_labelled_20240509.jsonl",
-    )[0][10:]
-
-    labelled_sents = load_s3_jsonl(
-        BUCKET_NAME,
-        s3_file_name="job_quality/prodigy/labelled_data/job_sentences_labelled_20240528.jsonl",
-        local_file=PROJECT_DIR
-        / f"inputs/labelled/job_sentences_labelled_20240528.jsonl",
-    )
-
-    unique_ids = []
-
-    for ad in labelled_sents1:
-        if ad["id"] not in unique_ids:
-            unique_ids.append(ad["id"])
-
-    for ad in labelled_sents:
-        if ad["meta"]["id"] not in unique_ids:
-            unique_ids.append(ad["meta"]["id"])
-
-    labelled_data = pdu.get_spans_and_sentences(labelled_sents, chunks=True)
-    labelled_data1 = pdu.get_spans_and_sentences(labelled_sents1, chunks=False)
-
-    labelled_df = pd.DataFrame(columns=["span", "sent", "text", "job_id", "chunk"])
-
-    for job in labelled_data.keys():
-        for chunk in labelled_data[job].keys():
-            temp_df = pd.DataFrame(labelled_data[job][chunk])
-            temp_df["job_id"] = job
-            temp_df["chunk"] = chunk
-            labelled_df = pd.concat([labelled_df, temp_df])
-
-    for job in labelled_data1.keys():
-        temp_df = pd.DataFrame(labelled_data1[job])
-        temp_df["job_id"] = job
-        temp_df["chunk"] = None
-        labelled_df = pd.concat([labelled_df, temp_df])
-
-    labelled_df_clean = labelled_df[labelled_df["span"] != ""]
-
-    labelled_df_clean["sentence"] = labelled_df_clean["sent"].apply(lambda x: x.text)
-
-    return labelled_df_clean
+    return final_results
 
 
 if __name__ == "__main__":
-    labelled_df_clean = get_clean_sentences()
+    eyp = get_eyp_ads()
+    sim_occs = get_sim_occ_ads()
+    all_job_ads = pd.concat([eyp, sim_occs], axis=0).drop_duplicates()
 
-    # get just the unique JQ sentences
-    sentence_df = labelled_df_clean[["job_id", "sentence"]].drop_duplicates()
-    # In case some sentences were not split correctly, split these up
-    sentence_df["sentences"] = sentence_df["sentence"].apply(tc.split_sentences)
+    logging.info(len(all_job_ads))
+    all_job_ads = all_job_ads[all_job_ads["created"] >= "2023-01-01"]  # .sample(
+    #     SAMPLE_SIZE, random_state=42
+    # )
+    logging.info(len(all_job_ads))
 
-    sentence_df_long = sentence_df.explode("sentences")
-
-    # After the splitting, remove any empty sentences
-    sentence_df_long = sentence_df_long[
-        ~sentence_df_long["sentences"].isin(["", " ", ".", "!"])
-    ]
+    all_job_ads["sentences"] = all_job_ads["clean_description"].apply(sent_tokenize)
+    all_job_ads = all_job_ads.explode("sentences")
+    logging.info(f"{len(all_job_ads)} sentences")
 
     # I would like all sentences that contain eg 'salary £xx,xxx per annum' to be recognised
     # as one ngram, so we'll replace digits with D
-    sentence_df_long["sentences_cleaned"] = sentence_df_long["sentences"].str.replace(
+    logging.info("Replacing digits with D...")
+    all_job_ads["sentences_cleaned"] = all_job_ads["sentences"].str.replace(
         r"\d", "D", regex=True
     )
 
     ngram_dict = get_most_common_n_grams(
-        sentence_df_long["sentences_cleaned"].tolist(), 100
+        all_job_ads["sentences_cleaned"].tolist(), TOP_N
     )
 
     for n in ngram_dict.keys():
@@ -127,4 +87,8 @@ if __name__ == "__main__":
         )
 
     for n in ngram_dict.keys():
-        ngram_dict[n].to_csv(PROJECT_DIR / f"outputs/data/ngram_{n}.csv", index=False)
+        ngram_dict[n].to_csv(
+            PROJECT_DIR
+            / f"outputs/data/ngram_{n}_top_{TOP_N}_2023_sample_size_{SAMPLE_SIZE}.csv",
+            index=False,
+        )
