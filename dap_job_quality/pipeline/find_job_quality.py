@@ -23,6 +23,9 @@ from dap_job_quality.getters.models import (
 )
 from dap_job_quality.getters.keywords import get_keywords
 
+nltk.download("punkt")
+nltk.download("stopwords")
+
 sent_model = SentenceTransformer("all-MiniLM-L6-v2")
 JOBBERT = "jjzha/jobbert-base-cased"
 
