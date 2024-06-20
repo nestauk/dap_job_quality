@@ -40,23 +40,28 @@ CS_THRESHOLD = 0.55
 LOOKUP = get_keywords()
 
 
-def convert_to_list(value):
-    if isinstance(value, str):
-        return [value]
-    elif isinstance(value, pd.Series):
-        return value.tolist()
-    return value
-
-
 def extract_job_quality_sentences(
-    job_adverts: Union[List, str], pca=pca, model=model, threshold: float = JQ_THRESHOLD
+    job_adverts: Union[pd.DataFrame, List[str], str],
+    id_col: str = "id",
+    text_col: str = "clean_description",
+    pca=pca,
+    model=model,
+    threshold: float = JQ_THRESHOLD,
 ) -> pd.DataFrame:
-    job_ads = convert_to_list(job_adverts)
+    if isinstance(job_adverts, str):
+        jobs_df = pd.DataFrame([{id_col: 0, text_col: job_adverts}])
+    elif isinstance(job_adverts, list):
+        jobs_df = (
+            pd.DataFrame(job_adverts, columns=[text_col])
+            .reset_index()
+            .rename(columns={"index": id_col})
+        )
+    elif isinstance(job_adverts, pd.DataFrame):
+        jobs_df = job_adverts[[id_col, text_col]].copy()
+    else:
+        raise ValueError("Input must be a DataFrame, a list of strings, or a string")
 
-    jobs_df = pd.DataFrame(job_ads, columns=["job_ad"]).reset_index()
-
-    # split into sentences
-    jobs_df["sentences"] = jobs_df["job_ad"].apply(lambda x: sent_tokenize(x))
+    jobs_df["sentences"] = jobs_df[text_col].apply(lambda x: sent_tokenize(x))
     jobs_df = jobs_df.explode("sentences")
 
     ad_embeddings = jobbert.embed_sentences(jobs_df["sentences"].tolist(), JOBBERT, 64)
@@ -249,7 +254,7 @@ if __name__ == "__main__":
         job_adverts = get_stratified_sample().sample(10, random_state=42)
 
     job_quality_df = extract_job_quality_sentences(
-        job_adverts["clean_description"].tolist()
+        job_adverts, "id", "clean_description"
     )
 
     job_quality_df_long = extract_ngrams(job_quality_df)
