@@ -12,6 +12,12 @@ def get_sim_occ_ads():
     return load_s3_data(BUCKET_NAME, "job_quality/early_years/sim_occs_job_ads.parquet")
 
 
+def get_jq_sentences():
+    return load_s3_data(
+        BUCKET_NAME, "job_quality/early_years/jq_sentences/jq_sentences_df_2023.parquet"
+    )
+
+
 def get_ngrams_and_matches() -> pd.DataFrame:
     """
     Unique ngrams that occurred in a sample of 27,772 sentences that were identified as being
@@ -23,5 +29,12 @@ def get_ngrams_and_matches() -> pd.DataFrame:
     """
     return load_s3_data(
         BUCKET_NAME,
-        "job_quality/early_years/jq_sentences/unique_ngrams_2023_matched.parquet",
+        "job_quality/early_years/jq_sentences/unique_ngrams_2023_matched_2024-06-19.parquet",
+    )
+
+
+def get_jq_sentences_and_matches() -> pd.DataFrame:
+    return load_s3_data(
+        BUCKET_NAME,
+        "job_quality/early_years/jq_sentences/jq_sentences_2023_matched_2024-06-19.parquet",
     )
