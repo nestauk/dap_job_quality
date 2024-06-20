@@ -227,7 +227,7 @@ def match_ngrams_to_adverts(matches, job_quality_df_long):
     jq_df_filtered = job_quality_df_long.loc[idx].reset_index(drop=True)
 
     return jq_df_filtered.drop(
-        ["index", "sentences", "job_quality_prob", "sentence_cleaned"], axis=1
+        ["sentences", "job_quality_prob", "sentence_cleaned"], axis=1
     )
 
 
@@ -251,7 +251,7 @@ if __name__ == "__main__":
     if args.production:
         job_adverts = get_stratified_sample()
     else:
-        job_adverts = get_stratified_sample().sample(10, random_state=42)
+        job_adverts = get_stratified_sample().sample(10)
 
     job_quality_df = extract_job_quality_sentences(
         job_adverts, "id", "clean_description"
