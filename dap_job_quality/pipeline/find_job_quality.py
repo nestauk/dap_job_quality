@@ -264,5 +264,5 @@ if __name__ == "__main__":
 
     jq_df_filtered = match_ngrams_to_adverts(matches, job_quality_df_long)
 
-    filename = f"early_years/evaluation_sample/job_ads_prod_{args.production}_sample_{len(job_adverts)}_{today}.parquet"
+    filename = f"job_quality/early_years/evaluation_sample/job_ads_prod_{args.production}_sample_{len(job_adverts)}_{today}.parquet"
     save_to_s3(BUCKET_NAME, jq_df_filtered, filename)
