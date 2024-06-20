@@ -38,3 +38,10 @@ def get_jq_sentences_and_matches() -> pd.DataFrame:
         BUCKET_NAME,
         "job_quality/early_years/jq_sentences/jq_sentences_2023_matched_2024-06-19.parquet",
     )
+
+
+def get_stratified_sample() -> pd.DataFrame:
+    return load_s3_data(
+        BUCKET_NAME,
+        "job_quality/early_years/evaluation_sample/job_ads_sample_5000.parquet",
+    )

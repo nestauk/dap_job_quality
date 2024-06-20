@@ -1,124 +1,265 @@
 """
-Mock up of the pipeline of extracting job quality measures from job adverts
+Pipeline to extract job quality measures from job adverts
 """
-
-from collections import defaultdict
+import argparse
+from datetime import datetime
+import nltk
 from nltk import ngrams
+from nltk.tokenize import sent_tokenize
+import numpy as np
+import pandas as pd
+import re
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+from typing import List, Union, Tuple
 
-import random
+from dap_job_quality import logging, BUCKET_NAME
+from dap_job_quality.getters.afs_data import get_stratified_sample
+from dap_job_quality.getters.data_getters import save_to_s3
+from dap_job_quality.utils import jobbert
+from dap_job_quality.getters.models import (
+    sentence_classifier_pca,
+    sentence_classifier_lr,
+)
+from dap_job_quality.getters.keywords import get_keywords
+
+sent_model = SentenceTransformer("all-MiniLM-L6-v2")
+JOBBERT = "jjzha/jobbert-base-cased"
+
+model = sentence_classifier_lr()
+pca = sentence_classifier_pca()
+
+today = datetime.today().strftime("%Y-%m-%d")
+
+JQ_THRESHOLD = 0.3
+CS_THRESHOLD = 0.55
+
+LOOKUP = get_keywords()
 
 
-def job_quality_sentences(job_adverts):
+def convert_to_list(value):
+    if isinstance(value, str):
+        return [value]
+    elif isinstance(value, pd.Series):
+        return value.tolist()
+    return value
+
+
+def extract_job_quality_sentences(
+    job_adverts: Union[List, str], pca=pca, model=model, threshold: float = JQ_THRESHOLD
+) -> pd.DataFrame:
+    job_ads = convert_to_list(job_adverts)
+
+    jobs_df = pd.DataFrame(job_ads, columns=["job_ad"]).reset_index()
+
+    # split into sentences
+    jobs_df["sentences"] = jobs_df["job_ad"].apply(lambda x: sent_tokenize(x))
+    jobs_df = jobs_df.explode("sentences")
+
+    ad_embeddings = jobbert.embed_sentences(jobs_df["sentences"].tolist(), JOBBERT, 64)
+
+    X_new_pca = pca.transform(ad_embeddings)
+
+    predictions = model.predict_proba(X_new_pca)[:, 1]
+
+    jobs_df["job_quality_prob"] = predictions
+
+    job_quality_df = jobs_df[jobs_df["job_quality_prob"] >= threshold]
+
+    return job_quality_df.reset_index(drop=True)
+
+
+def split_ngrams(
+    text: str, length: int = 6, n: int = 4
+) -> Union[List[Tuple[str, ...]], List[str]]:
     """
-    Returns a list of the JQ sentences for this job advert
-    TODO: use the classifier to do this
-    """
-    jq_sentences = {}
-    for job_id, job_advert in job_adverts.items():
-        jq_sentences[job_id] = [
-            sentence for sentence in job_advert.split(".") if "quality" in sentence
-        ]
+    Split the input text into n-grams if the number of words in the text exceeds the specified length.
 
-    return jq_sentences
+    Args:
+        text (str): The input text to be split into n-grams.
+        length (int): The maximum length of text in words before splitting into n-grams. Default is 6.
+        n (int): The number of words in each n-gram. Default is 4.
 
-
-def split_words(sentence):
+    Returns:
+        Union[List[Tuple[str, ...]], List[str]]: A list of n-grams (each n-gram is a tuple of words) if the text
+                                                 exceeds the specified length; otherwise, a list containing the
+                                                 original text.
     """
-    Split a sentence into words
-    TODO: is there a better method?
-    """
-    return sentence.split(" ")
-
-
-def get_quality_measures_per_ngram(ngram):
-    """
-    Return the quality measures for a ngram
-    TODO: replace with actual JQ algorithm
-    """
-    if "annual leave" in ngram:
-        return ("annual leave", 0.7)
-    elif "flexible hours" in ngram:
-        return ("flexible hours", 0.87)
-    elif "flexible location" in ngram:
-        return ("flexible location", 0.65)
+    if len(text.split()) > length:
+        ngram_list = list(ngrams(text.split(), n))
     else:
-        return None
+        ngram_list = [text]
+    return ngram_list
 
 
-def get_quality_measures(ngrams):
+def split_text(text: str) -> List[str]:
     """
-    Return the quality measures for a list of ngrams
-    TODO: replace with actual JQ algorithm
+    Split the input text by specified delimiters while avoiding splits within numbers or weekdays.
+
+    Eg 'Mon - Fri' should be kept as one string, while '- Salary 30k - Pension 5%' should be split into 'Salary 30k' and 'Pension 5%'.
+
+    Args:
+        text (str): The input text to be split.
+
+    Returns:
+        List[str]: A list of segments resulting from the split operation.
     """
-    ngram_quality = {ngram: get_quality_measures_per_ngram(ngram) for ngram in ngrams}
-    ngram_quality = {
-        k: v for k, v in ngram_quality.items() if v
-    }  # No need to keep the ones that don't map to quality measures
-    return ngram_quality
+
+    # List of weekdays and their abbreviations
+    weekdays = [
+        "Monday",
+        "Mon",
+        "Tuesday",
+        "Tues",
+        "Wednesday",
+        "Wed",
+        "Thursday",
+        "Thu",
+        "Friday",
+        "Fri",
+        "Saturday",
+        "Sat",
+        "Sunday",
+        "Sun",
+    ]
+
+    # Regular expression pattern to match weekdays as whole words
+    weekdays_pattern = "|".join(map(re.escape, weekdays))
+
+    # Regular expression to split by the delimiters but not within numbers or weekdays
+    split_pattern = r"(?<!\d)[,;:\(\)](?!\d)|(?<!\d) - (?!\d)"
+
+    # Split the text using the initial pattern
+    initial_splits = re.split(split_pattern, text)
+
+    # Further split to ensure no split happens between weekdays
+    final_splits = []
+    buffer = ""
+
+    for segment in initial_splits:
+        if re.search(rf"\b(?:{weekdays_pattern})\b", buffer) and re.search(
+            rf"\b(?:{weekdays_pattern})\b", segment
+        ):
+            buffer += " - " + segment
+        else:
+            if buffer:
+                final_splits.append(buffer)
+            buffer = segment
+
+    if buffer:
+        final_splits.append(buffer)
+
+    return final_splits
 
 
-def get_ngrams(jq_sentences_all):
+def extract_ngrams(job_quality_df, col="sentences"):
+    # perform further cleaning on the sentences
+    job_quality_df["sentences_split"] = job_quality_df[col].apply(split_text)
+    job_quality_df_long = job_quality_df.explode("sentences_split")
 
-    # Split by sentence, get ngrams and store sentences for later
-    job_ad_ngram_dict = defaultdict(list)
+    # replace digits with 'X'
+    job_quality_df_long["sentence_cleaned"] = job_quality_df_long[
+        "sentences_split"
+    ].str.replace(r"\d", "X", regex=True)
 
-    for job_id, jq_sentences in jq_sentences_all.items():
-        for sentence in jq_sentences:
-            words = split_words(sentence)
-            job_ngrams = [" ".join(ng) for ng in list(ngrams(words, 2))]
-            job_ad_ngram_dict[job_id].append(job_ngrams)
-
-    # Get all the unique ngrams
-    all_ngrams = list(
-        set(
-            [
-                ng
-                for sentence_list in job_ad_ngram_dict.values()
-                for ng_list in sentence_list
-                for ng in ng_list
-            ]
-        )
+    # get unique ngrams and their counts
+    job_quality_df_long["ngrams"] = job_quality_df_long["sentence_cleaned"].apply(
+        lambda x: split_ngrams(x, 6, 4)
+    )
+    job_quality_df_long = job_quality_df_long.explode("ngrams")
+    job_quality_df_long["ngrams"] = job_quality_df_long["ngrams"].apply(
+        lambda x: " ".join(x) if isinstance(x, tuple) else x
     )
 
-    return job_ad_ngram_dict, all_ngrams
+    return job_quality_df_long
 
 
-def extract_job_quality(job_adverts, jq_sentences_all, job_ad_ngram_dict):
+def match_to_lookup(ngrams: Union[pd.Series, List[str]], lookup, sent_model, threshold):
+    target_phrases = lookup["target_phrase"].tolist()
 
-    # Get the results per job advert
-    output_dict = {}
-    for job_id, _ in job_adverts.items():
-        quality_measures_per_sentence = []
-        for sentence_ngrams in job_ad_ngram_dict[job_id]:
-            quality_measures = [ngram_quality.get(ngram) for ngram in sentence_ngrams]
-            quality_measures_per_sentence.append([qm for qm in quality_measures if qm])
-        output_dict[job_id] = dict(
-            zip(jq_sentences_all[job_id], quality_measures_per_sentence)
-        )
+    target_embeddings = sent_model.encode(target_phrases)
 
-    return output_dict
+    ngram_embeddings = sent_model.encode(ngrams)
+
+    similarities = cosine_similarity(ngram_embeddings, target_embeddings)
+
+    # Find the index of the highest cosine similarity for each n-gram
+    max_indices = np.argmax(similarities, axis=1)
+
+    # Retrieve the corresponding target phrases
+    most_similar_phrases = [target_phrases[index] for index in max_indices]
+
+    most_similar_similarities = [
+        similarities[i, index] for i, index in enumerate(max_indices)
+    ]
+
+    most_similar_pairs = list(
+        zip(unique_ngrams, most_similar_phrases, most_similar_similarities)
+    )
+
+    matches = pd.DataFrame(
+        most_similar_pairs, columns=["ngrams", "target_phrase", "cosine_similarity"]
+    )
+
+    return matches[matches["cosine_similarity"] >= threshold]
+
+
+def match_ngrams_to_adverts(matches, job_quality_df_long):
+    job_quality_df_long = pd.merge(
+        job_quality_df_long, matches, how="left", left_on="ngrams", right_on="ngrams"
+    )
+
+    # Group by 'sentence_cleaned' and 'target_phrase' and find index of max cosine similarity so that you don't get multiple matches
+    # to the same target phrase
+    idx = job_quality_df_long.groupby(["sentence_cleaned", "target_phrase"])[
+        "cosine_similarity"
+    ].idxmax()
+
+    # Select the rows with these indices
+    jq_df_filtered = job_quality_df_long.loc[idx].reset_index(drop=True)
+
+    return jq_df_filtered.drop(
+        ["index", "sentences", "job_quality_prob", "sentence_cleaned"], axis=1
+    )
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Script to run with command line arguments."
+    )
+
+    parser.add_argument(
+        "--production",
+        default=False,
+        type=bool,
+        help="Run the script in production mode or test",
+    )
+
+    args = parser.parse_args()
+    logging.info(args)
 
     # Import the job adverts
-    job_adverts = {
-        0: "This is a job advert. There is a lot of quality measures in it such as flexible location. One quality measure is annual leave.",
-        1: "Here is another job advert. The job is for a role in a bank. This is a job quality sentence about flexible location and flexible hours.",
-    }
 
-    jq_sentences_all = job_quality_sentences(job_adverts)
+    if args.production:
+        job_adverts = get_stratified_sample()
+    else:
+        job_adverts = get_stratified_sample().sample(10, random_state=42)
 
-    job_ad_ngram_dict, all_ngrams = get_ngrams(jq_sentences_all)
+    job_quality_df = extract_job_quality_sentences(
+        job_adverts["clean_description"].tolist()
+    )
 
-    # Map the unique ngrams to quality measures
-    ngram_quality = get_quality_measures(all_ngrams)
+    job_quality_df_long = extract_ngrams(job_quality_df)
 
-    output_dict = extract_job_quality(job_adverts, jq_sentences_all, job_ad_ngram_dict)
-    print(output_dict)
+    ngram_counts = pd.DataFrame(
+        job_quality_df_long["ngrams"].value_counts()
+    ).reset_index()
 
-    # Outputs the job quality sentences and which JQ measures they map to (with e.g. similarity score)
-    # >>> output_dict[0]
-    # {' There is a lot of quality measures in it such as flexible location': [('flexible location', 0.65)], ' One quality measure is annual leave': [('annual leave', 0.7)]}
-    # >>> output_dict[1]
-    # {' This is a job quality sentence about flexible location and flexible hours': [('flexible location', 0.65), ('flexible hours', 0.87)]}
+    unique_ngrams = ngram_counts["ngrams"]
+
+    matches = match_to_lookup(unique_ngrams, LOOKUP, sent_model, CS_THRESHOLD)
+
+    jq_df_filtered = match_ngrams_to_adverts(matches, job_quality_df_long)
+
+    filename = f"early_years/evaluation_sample/job_ads_prod_{args.production}_sample_{len(job_adverts)}_{today}.parquet"
+    save_to_s3(BUCKET_NAME, jq_df_filtered, filename)
