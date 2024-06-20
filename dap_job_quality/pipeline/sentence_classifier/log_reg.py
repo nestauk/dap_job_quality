@@ -16,17 +16,15 @@ from sklearn.metrics import (
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from transformers import AutoTokenizer, AutoModel
-import torch
 from typing import List, Union, Optional
 import wandb
 
 from dap_job_quality import BUCKET_NAME, logging, config, PROJECT_DIR
 from dap_job_quality.getters.data_getters import load_s3_data, save_to_s3
+from dap_job_quality.utils import jobbert
 
 load_dotenv()
 
-SENT_MODEL = config["sentence_model"]
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/log_reg_confusion_matrix.png"
 WANDB_ENTITY = os.getenv("WANDB_ENTITY")
 
@@ -38,57 +36,6 @@ LOG_REG_PARAMS = {
 }
 
 PCA_VAR = 0.95
-
-
-# Mean Pooling - Take attention mask into account for correct averaging
-def mean_pooling(model_output, attention_mask):
-    token_embeddings = model_output[
-        0
-    ]  # First element of model_output contains all token embeddings
-    input_mask_expanded = (
-        attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    )
-    sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
-    sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-    return sum_embeddings / sum_mask
-
-
-def embed_sentences(
-    sentences: List[str], model_name: str = SENT_MODEL, batch_size: int = 32
-) -> List[torch.Tensor]:
-    """
-    Generate embeddings for each sentence in a list of sentences using a specified model.
-
-    Follows the method described here: https://www.sbert.net/examples/applications/computing-embeddings/README.html
-
-    Args:
-        sentences (List[str]): A list of sentences to be embedded.
-        model_name (str): The name of the model to use for generating embeddings. Default
-                          is a globally defined variable `SENT_MODEL`.
-
-    Returns:
-        List[torch.Tensor]: A list of tensors where each tensor represents the embedding
-                            of a corresponding sentence in the input list.
-    """
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModel.from_pretrained(model_name)
-
-    embeddings = []
-    for i in range(0, len(sentences), batch_size):
-        batch = sentences[i : i + batch_size]
-        encoded_input = tokenizer(
-            batch, padding=True, truncation=True, max_length=512, return_tensors="pt"
-        )
-
-        # Compute token embeddings
-        with torch.no_grad():
-            model_output = model(**encoded_input)
-
-        # Perform pooling. In this case, mean pooling
-        batch_embeddings = mean_pooling(model_output, encoded_input["attention_mask"])
-        embeddings.append(batch_embeddings)
-
-    return torch.cat(embeddings, dim=0)
 
 
 def record_errors(
@@ -162,8 +109,8 @@ if __name__ == "__main__":
     scaler = StandardScaler()
 
     # Embed sentences
-    X_train = embed_sentences(X_train)
-    X_val = embed_sentences(X_val)
+    X_train = jobbert.embed_sentences(X_train)
+    X_val = jobbert.embed_sentences(X_val)
 
     # Convert embeddings from list of arrays into a single numpy array
     X_train = np.vstack(X_train)
