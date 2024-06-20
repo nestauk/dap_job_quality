@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 from sklearn.model_selection import StratifiedShuffleSplit
 
@@ -6,6 +7,20 @@ from dap_job_quality.getters.afs_data import get_sim_occ_ads, get_eyp_ads
 from dap_job_quality.getters.data_getters import save_to_s3
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Script to run with command line arguments."
+    )
+
+    parser.add_argument(
+        "--sample_size",
+        default=100,
+        type=int,
+        help="How many job ads do you want in your sample?",
+    )
+
+    args = parser.parse_args()
+    logging.info(args)
+
     eyp = get_eyp_ads()
     sim_occs = get_sim_occ_ads()
     all_job_ads = pd.concat([eyp, sim_occs], axis=0).drop_duplicates()
@@ -28,7 +43,9 @@ if __name__ == "__main__":
     all_job_ads = all_job_ads[all_job_ads["stratify_col"].isin(to_keep)]
 
     # Define the stratified splitter
-    splitter = StratifiedShuffleSplit(n_splits=1, test_size=5000, random_state=42)
+    splitter = StratifiedShuffleSplit(
+        n_splits=1, test_size=args.sample_size, random_state=42
+    )
 
     # Perform the stratified sampling
     for train_index, test_index in splitter.split(
@@ -41,5 +58,5 @@ if __name__ == "__main__":
     save_to_s3(
         BUCKET_NAME,
         stratified_sample,
-        "job_quality/early_years/evaluation_sample/job_ads_sample_5000.parquet",
+        f"job_quality/early_years/evaluation_sample/job_ads_sample_{args.sample_size}.parquet",
     )
