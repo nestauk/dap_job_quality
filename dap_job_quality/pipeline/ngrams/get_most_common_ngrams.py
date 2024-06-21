@@ -1,3 +1,8 @@
+"""
+Script to get most common ngrams with different values of N from EYP/sim. occ. data.
+
+Note that this uses the full data - not just JQ sentences.
+"""
 from collections import Counter
 import nltk
 from nltk import ngrams

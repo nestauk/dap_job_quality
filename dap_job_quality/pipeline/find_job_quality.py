@@ -11,6 +11,8 @@ import pandas as pd
 import re
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.decomposition import PCA
+from sklearn.base import BaseEstimator
 from typing import List, Union, Tuple
 
 from dap_job_quality import logging, BUCKET_NAME
@@ -42,12 +44,26 @@ LOOKUP = get_keywords()
 
 def extract_job_quality_sentences(
     job_adverts: Union[pd.DataFrame, List[str], str],
+    pca: PCA,
+    model: BaseEstimator,
     id_col: str = "id",
     text_col: str = "clean_description",
-    pca=pca,
-    model=model,
     threshold: float = JQ_THRESHOLD,
 ) -> pd.DataFrame:
+    """Extracts sentences from job advertisements and predicts the job quality for each sentence.
+    The output dataframe contains sentences where the probability of being about job quality is greater than the threshold.
+
+    Args:
+        job_adverts (Union[pd.DataFrame, List[str], str]): Dataframe, list of strings, or string containing job adverts.
+        pca (PCA): pca for dimensionality reduction.
+        model (BaseEstimator): Logistic regression model to predict whether the sentence is about job quality.
+        id_col (str, optional): Unique identifier for job adverts. Defaults to "id".
+        text_col (str, optional): Column containing the advert text. Defaults to "clean_description".
+        threshold (float, optional): Threshold to use for predicting 1 from the logistic regression. Defaults to JQ_THRESHOLD.
+
+    Returns:
+        pd.DataFrame: _description_
+    """
     if isinstance(job_adverts, str):
         jobs_df = pd.DataFrame([{id_col: 0, text_col: job_adverts}])
     elif isinstance(job_adverts, list):
@@ -160,7 +176,19 @@ def split_text(text: str) -> List[str]:
     return final_splits
 
 
-def extract_ngrams(job_quality_df, col="sentences"):
+def extract_ngrams(
+    job_quality_df: pd.DataFrame, col: str = "sentences"
+) -> pd.DataFrame:
+    """
+    Does some extra cleaning on sentences in the job quality DataFrame and extracts ngrams.
+
+    Parameters:
+    job_quality_df (pd.DataFrame): DataFrame containing sentences with job quality information.
+    col (str): The column name containing the sentences. Defaults to "sentences".
+
+    Returns:
+    pd.DataFrame: A DataFrame with additional columns for split sentences, cleaned sentences, and n-grams.
+    """
     # perform further cleaning on the sentences
     job_quality_df["sentences_split"] = job_quality_df[col].apply(split_text)
     job_quality_df_long = job_quality_df.explode("sentences_split")
@@ -182,7 +210,24 @@ def extract_ngrams(job_quality_df, col="sentences"):
     return job_quality_df_long
 
 
-def match_to_lookup(ngrams: Union[pd.Series, List[str]], lookup, sent_model, threshold):
+def match_to_lookup(
+    ngrams: Union[pd.Series, List[str]],
+    lookup: pd.DataFrame,
+    sent_model,
+    threshold: float,
+) -> pd.DataFrame:
+    """
+    Matches n-grams to a lookup table of target phrases using cosine similarity.
+
+    Parameters:
+    ngrams (Union[pd.Series, List[str]]): The n-grams to be matched.
+    lookup (pd.DataFrame): DataFrame containing the target phrases to match against.
+    sent_model: The sentence embedding model to use for encoding the n-grams and target phrases.
+    threshold (float): The cosine similarity threshold for determining a match.
+
+    Returns:
+    pd.DataFrame: A DataFrame containing n-grams, their most similar target phrases, and cosine similarities.
+    """
     target_phrases = lookup["target_phrase"].tolist()
 
     target_embeddings = sent_model.encode(target_phrases)
@@ -191,10 +236,10 @@ def match_to_lookup(ngrams: Union[pd.Series, List[str]], lookup, sent_model, thr
 
     similarities = cosine_similarity(ngram_embeddings, target_embeddings)
 
-    # Find the index of the highest cosine similarity for each n-gram
+    # Find the index of the highest cosine similarity for each n-gram/lookup phrase combination
     max_indices = np.argmax(similarities, axis=1)
 
-    # Retrieve the corresponding target phrases
+    # Retrieve the text of the corresponding target phrases
     most_similar_phrases = [target_phrases[index] for index in max_indices]
 
     most_similar_similarities = [
@@ -212,7 +257,20 @@ def match_to_lookup(ngrams: Union[pd.Series, List[str]], lookup, sent_model, thr
     return matches[matches["cosine_similarity"] >= threshold]
 
 
-def match_ngrams_to_adverts(matches, job_quality_df_long):
+def match_ngrams_to_adverts(
+    matches: pd.DataFrame, job_quality_df_long: pd.DataFrame
+) -> pd.DataFrame:
+    """
+    Merges a dataframe of matched n-grams with a dataframe of job advertisements and filters the results based on cosine similarity.
+
+    Parameters:
+    matches (pd.DataFrame): DataFrame containing n-grams and their matched target phrases with cosine similarities.
+    job_quality_df_long (pd.DataFrame): DataFrame containing job quality information with n-grams.
+
+    Returns:
+    pd.DataFrame: A filtered DataFrame with matched n-grams and their corresponding job advertisements.
+    """
+
     job_quality_df_long = pd.merge(
         job_quality_df_long, matches, how="left", left_on="ngrams", right_on="ngrams"
     )
@@ -254,7 +312,12 @@ if __name__ == "__main__":
         job_adverts = get_stratified_sample().sample(10)
 
     job_quality_df = extract_job_quality_sentences(
-        job_adverts, "id", "clean_description"
+        job_adverts,
+        pca,
+        model,
+        "id",
+        "clean_description",
+        JQ_THRESHOLD,
     )
 
     job_quality_df_long = extract_ngrams(job_quality_df)
