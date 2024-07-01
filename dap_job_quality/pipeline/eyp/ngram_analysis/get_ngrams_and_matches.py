@@ -33,8 +33,9 @@ def split_ngrams(
                                                  exceeds the specified length; otherwise, a list containing the
                                                  original text.
     """
-    if len(text.split()) > length:
-        ngram_list = list(ngrams(text.split(), n))
+    text_words = text.split()
+    if len(text_words) > length:
+        ngram_list = list(ngrams(text_words, n))
     else:
         ngram_list = [text]
     return ngram_list
