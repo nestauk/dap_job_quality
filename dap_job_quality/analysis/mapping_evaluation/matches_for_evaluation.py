@@ -7,24 +7,22 @@ from dap_job_quality.getters.data_getters import load_s3_data, save_to_s3
 LOOKUP = get_keywords()
 
 
-def get_sample(df, n=100, seed=42):
+def get_sample(df, n=100, seed=42) -> pd.DataFrame:
     """
     Assuming your df has multiple rows per 'id' and 'sentences_split',
     this function will return a sample of n sentences (rather than sampling rows).
 
     Args:
-        df (_type_): _description_
-        n (int, optional): _description_. Defaults to 100.
-        seed (int, optional): _description_. Defaults to 42.
+        df (pd.DataFrame): Dataframe with a row per ngram?
+        n (int, optional): _Number of sentences to sample. Defaults to 100.
+        seed (int, optional): Random seed for sampling. Defaults to 42.
 
     Returns:
-        _type_: _description_
+        pd.DataFrame: _description_
     """
-    sample_sents = (
-        df[["id", "sentences_split"]].drop_duplicates().sample(n, random_state=seed)
+    return df.drop_duplicates(subset=["id", "sentences_split"]).sample(
+        n, random_state=seed
     )
-    sample_sents = sample_sents.merge(df, on=["id", "sentences_split"], how="left")
-    return sample_sents
 
 
 if __name__ == "__main__":
