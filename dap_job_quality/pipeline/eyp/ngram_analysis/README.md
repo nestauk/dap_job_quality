@@ -6,7 +6,7 @@ The final run of this pipeline (using a cosine similarity threshold) is in `pipe
 
 The scripts run in this order:
 
-1. `get_embeddings.py`: embeds the adverts from the sample using [jobbert](https://huggingface.co/jjzha/jobbert-base-cased). These embeddings are generated and saved separately to the rest of the process because they take up so much memory.
+1. `get_embeddings.py`: embeds the adverts from the sample using [jobbert](https://huggingface.co/jjzha/jobbert-base-cased). These embeddings are generated and saved separately to the rest of the process because they take up so much memory. Only job adverts from 2023 onwards were included.
 
 2. `extract_jq_sentences.py`: the embeddings generated at the previous stage are reduced using a pre-fit PCA, and predictions are generated using a logistic regression classifier (the code that trains these is in `pipeline/sentence_classifier/`). In order to maximise recall, we use a threshold of 0.3 instead of the usual 0.5 with the logistic regression model. Sentences that are predicted to relate to job quality are filtered and saved.
 
