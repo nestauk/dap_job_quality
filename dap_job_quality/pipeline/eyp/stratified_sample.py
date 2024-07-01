@@ -13,9 +13,9 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--sample_size",
-        default=100,
-        type=int,
-        help="How many job ads do you want in your sample?",
+        default=0.1,
+        type=float,
+        help="What proportion of job ads do you want in your sample?",
     )
 
     args = parser.parse_args()
@@ -36,6 +36,7 @@ if __name__ == "__main__":
 
     all_job_ads = all_job_ads[all_job_ads["itl_1_code"].notnull()]
     all_job_ads = all_job_ads[all_job_ads["year"] > 2020]
+    logging.info(f"Total number of job ads (post 2020): {len(all_job_ads)}")
 
     # Identify and remove classes with fewer than two members
     value_counts = all_job_ads["stratify_col"].value_counts()
@@ -54,9 +55,11 @@ if __name__ == "__main__":
         stratified_sample = all_job_ads.iloc[test_index]
 
     stratified_sample.drop(columns=["stratify_col"], inplace=True)
+    sample_n_rows = len(stratified_sample)
+    logging.info(f"Size of sample: {sample_n_rows}")
 
     save_to_s3(
         BUCKET_NAME,
         stratified_sample,
-        f"job_quality/early_years/evaluation_sample/job_ads_sample_{args.sample_size}.parquet",
+        f"job_quality/early_years/evaluation_sample/job_ads_sample_prop_{args.sample_size}_size_{sample_n_rows}.parquet",
     )
