@@ -1,3 +1,9 @@
+"""
+Script to create data for this manual evaluation: https://docs.google.com/spreadsheets/d/1Ol-FqmIkyCG-gBuT4NIKRBMfImf5NNzrRvoGzmw5fYw/edit?gid=2007053082#gid=2007053082
+
+
+"""
+
 import pandas as pd
 
 from dap_job_quality import BUCKET_NAME
@@ -14,7 +20,7 @@ def get_sample(df, n=100, seed=42) -> pd.DataFrame:
 
     Args:
         df (pd.DataFrame): Dataframe with a row per ngram?
-        n (int, optional): _Number of sentences to sample. Defaults to 100.
+        n (int, optional): Number of sentences to sample. Defaults to 100.
         seed (int, optional): Random seed for sampling. Defaults to 42.
 
     Returns:
