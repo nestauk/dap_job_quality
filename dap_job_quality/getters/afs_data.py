@@ -1,21 +1,54 @@
+import numpy as np
 import pandas as pd
+import torch
 
-from dap_job_quality.getters.data_getters import load_s3_data
-from dap_job_quality import BUCKET_NAME
+from dap_job_quality.getters.data_getters import load_s3_data, download_from_s3
+from dap_job_quality import BUCKET_NAME, PROJECT_DIR
 
 
 def get_eyp_ads():
+    """Get a sample of ads for Early Years Professionals."""
     return load_s3_data(BUCKET_NAME, "job_quality/early_years/eyp_job_ads.parquet")
 
 
 def get_sim_occ_ads():
+    """Get a sample of ads for similar occupations to Early Years Professionals.
+    This includes hospitality and retail.
+    """
     return load_s3_data(BUCKET_NAME, "job_quality/early_years/sim_occs_job_ads.parquet")
 
 
 def get_jq_sentences():
+    """Created by the script dap_job_quality/pipeline/eyp/ngram_analysis/extract_jq_sentences.py"""
     return load_s3_data(
         BUCKET_NAME, "job_quality/early_years/jq_sentences/jq_sentences_df_2023.parquet"
     )
+
+
+def ngram_analysis_embeddings():
+    """
+    Created in the script dap_job_quality/pipeline/eyp/ngram_analysis/get_embeddings.py
+    """
+    file_name = PROJECT_DIR / "inputs/eyp/embeddings_2023.npy"
+    download_from_s3(
+        BUCKET_NAME, "job_quality/early_years/embeddings_2023.npy", file_name
+    )
+
+    np_array = np.load(file_name)
+    tensor = torch.from_numpy(np_array)
+    return tensor
+
+
+def ngram_analysis_identifiers():
+    """
+    Created in the script dap_job_quality/pipeline/eyp/ngram_analysis/get_embeddings.py
+    """
+    file_name = PROJECT_DIR / "inputs/eyp/identifiers_2023.npy"
+    download_from_s3(
+        BUCKET_NAME, "job_quality/early_years/identifiers_2023.npy", file_name
+    )
+
+    return np.load(file_name)
 
 
 def get_ngrams_and_matches() -> pd.DataFrame:
