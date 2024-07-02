@@ -109,8 +109,9 @@ def split_ngrams(
                                                  exceeds the specified length; otherwise, a list containing the
                                                  original text.
     """
-    if len(text.split()) > length:
-        ngram_list = list(ngrams(text.split(), n))
+    text_words = text.split()
+    if len(text_words) > length:
+        ngram_list = list(ngrams(text_words, n))
     else:
         ngram_list = [text]
     return ngram_list
@@ -247,7 +248,7 @@ def match_to_lookup(
     ]
 
     most_similar_pairs = list(
-        zip(unique_ngrams, most_similar_phrases, most_similar_similarities)
+        zip(ngrams, most_similar_phrases, most_similar_similarities)
     )
 
     matches = pd.DataFrame(
@@ -310,6 +311,8 @@ if __name__ == "__main__":
         job_adverts = get_stratified_sample()
     else:
         job_adverts = get_stratified_sample().sample(10)
+
+    logging.info(f"Sample size: {len(job_adverts)}")
 
     job_quality_df = extract_job_quality_sentences(
         job_adverts,

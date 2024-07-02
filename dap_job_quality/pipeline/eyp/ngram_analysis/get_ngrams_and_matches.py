@@ -1,19 +1,12 @@
 from datetime import datetime
-from nltk import ngrams
-import numpy as np
 import pandas as pd
-import re
-from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
-from typing import List, Tuple, Union
 
 from dap_job_quality import logging, BUCKET_NAME
 from dap_job_quality.getters.afs_data import get_jq_sentences
 from dap_job_quality.getters.data_getters import save_to_s3
 from dap_job_quality.getters.keywords import get_keywords
 from dap_job_quality.pipeline.find_job_quality import (
-    split_ngrams,
-    split_text,
     extract_ngrams,
     match_to_lookup,
 )

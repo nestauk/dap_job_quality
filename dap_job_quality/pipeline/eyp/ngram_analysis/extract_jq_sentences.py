@@ -10,42 +10,19 @@ from dap_job_quality.getters.models import (
     sentence_classifier_lr,
 )
 from dap_job_quality.getters.data_getters import load_s3_data, save_to_s3
-
-OBJECT_NAME_EMBEDDINGS = "job_quality/early_years/embeddings_2023.npy"
-FILE_NAME_EMBEDDINGS = PROJECT_DIR / "inputs/eyp/embeddings_2023.npy"
-OBJECT_NAME_IDENTIFIERS = "job_quality/early_years/identifiers_2023.npy"
-FILE_NAME_IDENTIFIERS = PROJECT_DIR / "inputs/eyp/identifiers_2023.npy"
+from dap_job_quality.getters.afs_data import (
+    ngram_analysis_embeddings,
+    ngram_analysis_identifiers,
+)
 
 model = sentence_classifier_lr()
 pca = sentence_classifier_pca()
 
 THRESHOLD = 0.3
 
-
-def download_from_s3(bucket_name, object_name, file_name):
-    # Create parent directories if they do not exist
-    os.makedirs(os.path.dirname(file_name), exist_ok=True)
-
-    s3_client = boto3.client("s3")
-    s3_client.download_file(bucket_name, object_name, file_name)
-
-
-def load_embeddings_numpy(file_name: str) -> torch.Tensor:
-    np_array = np.load(file_name)
-    tensor = torch.from_numpy(np_array)
-    return tensor
-
-
-def load_identifiers_numpy(file_name: str) -> np.ndarray:
-    return np.load(file_name)
-
-
 if __name__ == "__main__":
-    download_from_s3(BUCKET_NAME, OBJECT_NAME_EMBEDDINGS, FILE_NAME_EMBEDDINGS)
-    download_from_s3(BUCKET_NAME, OBJECT_NAME_IDENTIFIERS, FILE_NAME_IDENTIFIERS)
-
-    ad_embeddings = load_embeddings_numpy(FILE_NAME_EMBEDDINGS)
-    identifiers = load_identifiers_numpy(FILE_NAME_IDENTIFIERS)
+    ad_embeddings = ngram_analysis_embeddings()
+    identifiers = ngram_analysis_identifiers()
 
     X_new_pca = pca.transform(ad_embeddings)
 

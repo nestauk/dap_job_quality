@@ -13,9 +13,9 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--sample_size",
-        default=0.1,
-        type=float,
-        help="What proportion of job ads do you want in your sample?",
+        default=500,
+        type=int,
+        help="How many job ads do you want in your sample?",
     )
 
     args = parser.parse_args()
@@ -43,6 +43,11 @@ if __name__ == "__main__":
     to_keep = value_counts[value_counts > 2].index
     all_job_ads = all_job_ads[all_job_ads["stratify_col"].isin(to_keep)]
 
+    if (args.sample_size - len(all_job_ads["stratify_col"].unique())) < 0:
+        raise ValueError(
+            "The sample is not big enough to accommodate the stratification. Choose a larger sample size."
+        )
+
     # Define the stratified splitter
     splitter = StratifiedShuffleSplit(
         n_splits=1, test_size=args.sample_size, random_state=42
@@ -61,5 +66,5 @@ if __name__ == "__main__":
     save_to_s3(
         BUCKET_NAME,
         stratified_sample,
-        f"job_quality/early_years/evaluation_sample/job_ads_sample_prop_{args.sample_size}_size_{sample_n_rows}.parquet",
+        f"job_quality/early_years/evaluation_sample/job_ads_sample_size_{sample_n_rows}.parquet",
     )
