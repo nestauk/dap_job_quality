@@ -1,0 +1,2 @@
+- PCA for dimensionality reduction
+- Logistic regression that returns 1 if the sentence is predicted to relate to job quality, 0 otherwise.

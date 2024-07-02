@@ -1,0 +1,31 @@
+name: finetuning
+
+resources:
+  instance_type: g5.xlarge
+  use_spot: true # This line specifies that you want to use a spot instance, which is cheaper
+  cloud: aws
+  region: eu-west-2
+
+file_mounts:
+  /skypilot:
+    source: s3://open-jobs-lake
+    mode: MOUNT
+
+setup: |
+  sudo apt-get update -y
+  sudo apt-get install direnv
+  pip install --upgrade pip
+  conda init bash
+  rm -rf dap_job_quality  # Remove the directory if it exists
+  git clone https://github.com/nestauk/dap_job_quality
+  cd dap_job_quality
+  direnv allow .
+  make install
+  conda activate dap_job_quality
+  python -m ipykernel install --user --name=dap_job_quality
+
+run: |
+  cd ~/sky_workdir/dap_job_quality
+  conda deactivate
+  conda activate dap_job_quality
+  jupyter notebook --port 8888

@@ -2,7 +2,8 @@ boto3
 fsspec
 langchain_openai
 matplotlib
-nltk
+nltk==3.8.1
+numpy==1.26.3
 openpyxl
 pandas
 plac
@@ -14,6 +15,8 @@ sentence-transformers
 spacy
 srsly
 toolz
-wandb
+wandb==0.16.6
 wordcloud
 xlrd
+torch==2.1.2
+tqdm==4.66.1

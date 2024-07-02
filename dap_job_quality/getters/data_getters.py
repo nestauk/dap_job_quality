@@ -263,6 +263,14 @@ def load_s3_data(bucket_name: str, file_name: str):
         )
 
 
+def download_from_s3(bucket_name, object_name, file_name):
+    # Create parent directories if they do not exist
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+
+    s3_client = boto3.client("s3")
+    s3_client.download_file(bucket_name, object_name, file_name)
+
+
 def get_s3_data_paths(bucket_name: str, root: str, file_types=["*.jsonl"]):
     """
     Get all paths to particular file types in a S3 root location
@@ -297,4 +305,4 @@ def load_s3_excel(bucket_name: str, file_name: str, sheet_name: str = "All"):
     Returns:
         Loaded data (df)
     """
-    return pd.read_excel("s3://" + BUCKET_NAME + "/" + file_name, sheet_name="All")
+    return pd.read_excel("s3://" + bucket_name + "/" + file_name, sheet_name=sheet_name)

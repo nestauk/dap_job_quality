@@ -5,6 +5,7 @@ import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
+import pickle
 from sklearn.decomposition import PCA
 from sklearn.metrics import (
     classification_report,
@@ -15,17 +16,15 @@ from sklearn.metrics import (
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from transformers import AutoTokenizer, AutoModel
-import torch
 from typing import List, Union, Optional
 import wandb
 
 from dap_job_quality import BUCKET_NAME, logging, config, PROJECT_DIR
-from dap_job_quality.getters.data_getters import load_s3_data
+from dap_job_quality.getters.data_getters import load_s3_data, save_to_s3
+from dap_job_quality.utils import jobbert
 
 load_dotenv()
 
-SENT_MODEL = config["sentence_model"]
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/log_reg_confusion_matrix.png"
 WANDB_ENTITY = os.getenv("WANDB_ENTITY")
 
@@ -37,54 +36,6 @@ LOG_REG_PARAMS = {
 }
 
 PCA_VAR = 0.95
-
-
-# Mean Pooling - Take attention mask into account for correct averaging
-def mean_pooling(model_output, attention_mask):
-    token_embeddings = model_output[
-        0
-    ]  # First element of model_output contains all token embeddings
-    input_mask_expanded = (
-        attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    )
-    sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
-    sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-    return sum_embeddings / sum_mask
-
-
-def embed_sentences(
-    sentences: List[str], model_name: str = SENT_MODEL
-) -> List[torch.Tensor]:
-    """
-    Generate embeddings for each sentence in a list of sentences using a specified model.
-
-    Follows the method described here: https://www.sbert.net/examples/applications/computing-embeddings/README.html
-
-    Args:
-        sentences (List[str]): A list of sentences to be embedded.
-        model_name (str): The name of the model to use for generating embeddings. Default
-                          is a globally defined variable `SENT_MODEL`.
-
-    Returns:
-        List[torch.Tensor]: A list of tensors where each tensor represents the embedding
-                            of a corresponding sentence in the input list.
-    """
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModel.from_pretrained(model_name)
-
-    # Tokenize sentences
-    encoded_input = tokenizer(
-        sentences, padding=True, truncation=True, max_length=512, return_tensors="pt"
-    )
-
-    # Compute token embeddings
-    with torch.no_grad():
-        model_output = model(**encoded_input)
-
-    # Perform pooling. In this case, mean pooling
-    embeddings = mean_pooling(model_output, encoded_input["attention_mask"])
-
-    return embeddings
 
 
 def record_errors(
@@ -135,6 +86,7 @@ def record_errors(
 
 
 if __name__ == "__main__":
+    logging.info("Loading data...")
     X_train = load_s3_data(
         BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/X_train.pkl"
     )
@@ -144,6 +96,7 @@ if __name__ == "__main__":
     y_train = load_s3_data(
         BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_train.pkl"
     )
+    y_train_writeable = np.copy(y_train)
     y_val = load_s3_data(
         BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_val.pkl"
     )
@@ -156,8 +109,8 @@ if __name__ == "__main__":
     scaler = StandardScaler()
 
     # Embed sentences
-    X_train = embed_sentences(X_train)
-    X_val = embed_sentences(X_val)
+    X_train = jobbert.embed_sentences(X_train)
+    X_val = jobbert.embed_sentences(X_val)
 
     # Convert embeddings from list of arrays into a single numpy array
     X_train = np.vstack(X_train)
@@ -165,6 +118,7 @@ if __name__ == "__main__":
     X_val = np.vstack(X_val)
     X_val = scaler.transform(X_val)
 
+    logging.info("Initialising weights and biases run...")
     run = wandb.init(
         project="dap-job-quality",
         entity=WANDB_ENTITY,
@@ -174,8 +128,13 @@ if __name__ == "__main__":
     )
 
     # Dimensionality Reduction with PCA
+    logging.info("Reducing dimensionality with PCA...")
     pca = PCA(n_components=PCA_VAR, random_state=LOG_REG_PARAMS["random_state"])
     X_train_pca = pca.fit_transform(X_train)
+    pickle.dump(
+        pca, open(PROJECT_DIR / "outputs/models/sentence_classifier/pca.pkl", "wb")
+    )
+    save_to_s3(BUCKET_NAME, pca, "job_quality/sentence_classifier/outputs/pca.pkl")
     X_val_pca = pca.transform(X_val)
     logging.info(X_train_pca.shape)
 
@@ -186,9 +145,23 @@ if __name__ == "__main__":
         random_state=LOG_REG_PARAMS["random_state"],
         max_iter=LOG_REG_PARAMS["max_iter"],
     )
-    model.fit(X_train_pca, y_train)
+    logging.info("Fitting a logistic regression model...")
+    model.fit(X_train_pca, y_train_writeable)
+    pickle.dump(
+        model,
+        open(
+            PROJECT_DIR / "outputs/models/sentence_classifier/logistic_regression.pkl",
+            "wb",
+        ),
+    )
+    save_to_s3(
+        BUCKET_NAME,
+        model,
+        "job_quality/sentence_classifier/outputs/logistic_regression.pkl",
+    )
 
     # Evaluate the model on the validation set
+    logging.info("Making predictions...")
     y_pred = model.predict(X_val_pca)
     logging.info(classification_report(y_val, y_pred))
 
@@ -209,6 +182,7 @@ if __name__ == "__main__":
     wb_confusion_matrix = wandb.Table(data=cm_df, columns=["0", "1"])
     run.log({"confusion_matrix": wb_confusion_matrix})
 
+    logging.info("Recording errors...")
     record_errors(
         X_val_df,
         y_val,
