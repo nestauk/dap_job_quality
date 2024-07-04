@@ -452,23 +452,5 @@ if __name__ == "__main__":
         "clean_description",
     )
 
-    # job_quality_df = job_quality.extract_job_quality_sentences(
-    #     job_adverts,
-    #     "id",
-    #     "clean_description",
-    # )
-
-    # job_quality_df_long = job_quality.extract_ngrams(job_quality_df)
-
-    # ngram_counts = pd.DataFrame(
-    #     job_quality_df_long["ngrams"].value_counts()
-    # ).reset_index()
-
-    # unique_ngrams = ngram_counts["ngrams"]
-
-    # matches = job_quality.match_to_lookup(unique_ngrams)
-
-    # jq_df_filtered = job_quality.match_ngrams_to_adverts(matches, job_quality_df_long)
-
-    # filename = f"job_quality/early_years/evaluation_sample/job_ads_prod_{args.production}_sample_{len(job_adverts)}_{today}.parquet"
-    # save_to_s3(BUCKET_NAME, jq_df_filtered, filename)
+    filename = f"job_quality/early_years/evaluation_sample/job_ads_prod_{args.production}_sample_{len(job_adverts)}_{today}.parquet"
+    save_to_s3(BUCKET_NAME, jq_df_filtered, filename)
