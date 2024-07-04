@@ -1,3 +1,5 @@
+import pandas as pd
+
 from dap_job_quality.getters.data_getters import load_s3_jsonl
 
 from dap_job_quality import BUCKET_NAME, PROJECT_DIR
@@ -26,4 +28,28 @@ def get_labelled_job_sentences():
         s3_file_name="job_quality/prodigy/labelled_data/job_sentences_labelled_20240528.jsonl",
         local_file=PROJECT_DIR
         / f"inputs/labelled/job_sentences_labelled_20240528.jsonl",
+    )
+
+
+def get_older_labelled_data():
+    """The first batch of labelling that we did"""
+    return load_s3_jsonl(
+        BUCKET_NAME,
+        s3_file_name="job_quality/prodigy/binary_classifier_labelled_data/20240416/job_sentences_labelled_20240416.jsonl",
+        local_file=PROJECT_DIR
+        / f"inputs/labelled/job_sentences_labelled_20240416.jsonl",
+    )[
+        0
+    ]  # it's a nested list for some reason
+
+
+def get_positive_sents_labelled_for_categories():
+    return pd.read_csv(
+        "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/positive_sents_for_labelling - positive_sents_for_labelling.csv"
+    )
+
+
+def get_additional_examples_underrepresented_categories():
+    return pd.read_csv(
+        "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/additional_green_jobs_examples_20240704_labelled.csv"
     )

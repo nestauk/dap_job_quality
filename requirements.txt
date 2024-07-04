@@ -20,3 +20,4 @@ wordcloud
 xlrd
 torch==2.1.2
 tqdm==4.66.1
+umap-learn
