@@ -13,6 +13,7 @@ from sklearn.metrics import (
     ConfusionMatrixDisplay,
     accuracy_score,
     f1_score,
+    recall_score,
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
@@ -170,6 +171,9 @@ if __name__ == "__main__":
 
     wandb.run.summary["accuracy"] = accuracy_score(y_val, y_pred)
     wandb.run.summary["f1_score"] = f1_score(y_val, y_pred)
+    wandb.run.summary["recall"] = recall_score(
+        y_val, y_pred
+    )  # we would like better recall please
 
     cm = confusion_matrix(y_val, y_pred)
     cm_df = pd.DataFrame(cm)
