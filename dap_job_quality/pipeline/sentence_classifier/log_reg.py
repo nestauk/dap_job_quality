@@ -26,7 +26,6 @@ from dap_job_quality.utils import jobbert
 load_dotenv()
 
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/log_reg_confusion_matrix.png"
-WANDB_ENTITY = os.getenv("WANDB_ENTITY")
 
 LOG_REG_PARAMS = {
     "penalty": "l2",
@@ -121,7 +120,7 @@ if __name__ == "__main__":
     logging.info("Initialising weights and biases run...")
     run = wandb.init(
         project="dap-job-quality",
-        entity=WANDB_ENTITY,
+        entity="nesta-uk",
         job_type="Sentence classifier",
         save_code=True,
         tags=[f"logistic_regression"],
