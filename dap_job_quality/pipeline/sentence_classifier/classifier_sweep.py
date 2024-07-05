@@ -113,7 +113,7 @@ def train(config, X_train, X_val, y_train, y_val):
 
     # Embed sentences
     X_train = jobbert.embed_sentences(X_train, model_name=config["embedding_model"])
-    X_val = jobbert.embed_sentences(X_val)
+    X_val = jobbert.embed_sentences(X_val, model_name=config["embedding_model"])
 
     # Convert embeddings from list of arrays into a single numpy array
     X_train = np.vstack(X_train)
