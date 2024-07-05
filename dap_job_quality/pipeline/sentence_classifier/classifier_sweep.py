@@ -109,12 +109,14 @@ def record_errors(
         wandb.log({f"false_{type}": wb_errors})
 
 
-def train(config, X_train, X_val, y_train, y_val):
+def train(config, X_train, X_val_df, y_train, y_val):
     scaler = StandardScaler()
 
     # Embed sentences
     X_train = jobbert.embed_sentences(X_train, model_name=config["embedding_model"])
-    X_val = jobbert.embed_sentences(X_val, model_name=config["embedding_model"])
+    X_val = jobbert.embed_sentences(
+        X_val_df["sentence"].tolist(), model_name=config["embedding_model"]
+    )
 
     # Convert embeddings from list of arrays into a single numpy array
     X_train = np.vstack(X_train)
@@ -170,7 +172,7 @@ def train(config, X_train, X_val, y_train, y_val):
 
     logging.info("Recording errors...")
     record_errors(
-        X_val,
+        X_val_df,
         y_val,
         preds,
         type="negatives",
@@ -178,7 +180,7 @@ def train(config, X_train, X_val, y_train, y_val):
         outpath=PROJECT_DIR / "outputs/data/log_reg_false_negatives.csv",
     )
     record_errors(
-        X_val,
+        X_val_df,
         y_val,
         preds,
         type="positives",
@@ -216,9 +218,11 @@ def main():
     # X_val_df = X_val.copy()
 
     X_train = X_train["sentence"].tolist()
-    X_val = X_val["sentence"].tolist()
+    X_val_df = (
+        X_val.copy()
+    )  # For the sake of relating predictions back to the original df and recording errors
 
-    accuracy, recall, f1, cm = train(wandb.config, X_train, X_val, y_train, y_val)
+    accuracy, recall, f1, cm = train(wandb.config, X_train, X_val_df, y_train, y_val)
     wandb.log({"accuracy": accuracy})
 
     wandb.run.summary["accuracy"] = accuracy
