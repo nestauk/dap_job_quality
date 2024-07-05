@@ -43,6 +43,12 @@ def get_older_labelled_data():
     ]  # it's a nested list for some reason
 
 
+def get_concat_labelled_data():
+    return pd.read_csv(
+        "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labellied/train_val_test_20240703.csv"
+    )
+
+
 def get_positive_sents_labelled_for_categories():
     return pd.read_csv(
         "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/positive_sents_for_labelling - positive_sents_for_labelling.csv"

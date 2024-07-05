@@ -88,18 +88,18 @@ def record_errors(
 if __name__ == "__main__":
     logging.info("Loading data...")
     X_train = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/X_train.pkl"
-    )
+        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/train_df.parquet"
+    ).drop(["label"], axis=1)
     X_val = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/X_val.pkl"
-    )
+        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/val_df.parquet"
+    ).drop(["label"], axis=1)
     y_train = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_train.pkl"
-    )
+        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/train_df.parquet"
+    )["label"]
     y_train_writeable = np.copy(y_train)
     y_val = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_val.pkl"
-    )
+        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/val_df.parquet"
+    )["label"]
 
     X_val_df = X_val.copy()
 
