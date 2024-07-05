@@ -191,6 +191,7 @@ def train(config, X_train, X_val, y_train, y_val):
 def main():
     wandb.init(
         project="dap-job-quality",
+        entity="nesta-uk",
         job_type="sentence_classifier",
         save_code=True,
         tags=["logistic regression"],
@@ -229,6 +230,8 @@ def main():
 
 
 if __name__ == "__main__":
-    sweep_id = wandb.sweep(sweep=sweep_config, project="dap-job-quality")
+    sweep_id = wandb.sweep(
+        sweep=sweep_config, entity="nesta-uk", project="dap-job-quality"
+    )
 
-    wandb.agent(sweep_id, entity="nesta-uk", function=main, count=100)
+    wandb.agent(sweep_id, function=main, count=100)
