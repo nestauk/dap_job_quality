@@ -41,6 +41,7 @@ sweep_config = {
             ]
         },
         "penalty": {"values": ["l1", "l2"]},
+        "solver": {"values": ["liblinear", "lbfgs"]},
         "C": {"values": [0.01, 0.1, 1, 10, 100]},
         "max_iter": {"values": [100, 200, 300, 500]},
     },
