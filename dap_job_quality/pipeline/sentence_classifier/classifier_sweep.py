@@ -146,7 +146,7 @@ def train(config, X_train, X_val, y_train, y_val):
     preds = model.predict(X_val_pca)
     accuracy = accuracy_score(y_val, preds)
     recall = recall_score(y_val, preds)
-    f1_score = f1_score(y_val, preds)
+    f1 = f1_score(y_val, preds)
 
     # wandb.run.summary["accuracy"] = accuracy_score(y_val, preds)
     # wandb.run.summary["f1_score"] = f1_score(y_val, preds)
@@ -186,7 +186,7 @@ def train(config, X_train, X_val, y_train, y_val):
         outpath=PROJECT_DIR / "outputs/data/log_reg_false_positives.csv",
     )
 
-    return accuracy, recall, f1_score, cm
+    return accuracy, recall, f1, cm
 
 
 def main():
@@ -218,11 +218,11 @@ def main():
     X_train = X_train["sentence"].tolist()
     X_val = X_val["sentence"].tolist()
 
-    accuracy, recall, f1_score, cm = train(wandb.config, X_train, X_val, y_train, y_val)
+    accuracy, recall, f1, cm = train(wandb.config, X_train, X_val, y_train, y_val)
     wandb.log({"accuracy": accuracy})
 
     wandb.run.summary["accuracy"] = accuracy
-    wandb.run.summary["f1_score"] = f1_score
+    wandb.run.summary["f1_score"] = f1
     wandb.run.summary["recall"] = recall
 
     # Log confusion matrix
