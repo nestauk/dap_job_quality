@@ -78,7 +78,11 @@ def record_errors(
 
     errors_df = X_val_df.iloc[errors]
 
+    # Ensure the output directory exists
+    outpath = Path(outpath)
+    outpath.parent.mkdir(parents=True, exist_ok=True)
     errors_df.to_csv(outpath, index=False)
+
     if log_wandb and run is not None:
         wb_errors = wandb.Table(data=errors_df)
         run.log({f"false_{type}": wb_errors})
