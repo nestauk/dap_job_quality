@@ -147,25 +147,25 @@ def train(config, X_train, X_val, y_train, y_val):
     recall = recall_score(y_val, preds)
     f1_score = f1_score(y_val, preds)
 
-    wandb.run.summary["accuracy"] = accuracy_score(y_val, y_pred)
-    wandb.run.summary["f1_score"] = f1_score(y_val, y_pred)
-    wandb.run.summary["recall"] = recall_score(
-        y_val, y_pred
-    )  # we would like better recall please
+    # wandb.run.summary["accuracy"] = accuracy_score(y_val, preds)
+    # wandb.run.summary["f1_score"] = f1_score(y_val, preds)
+    # wandb.run.summary["recall"] = recall_score(
+    #     y_val, preds
+    # )  # we would like better recall please
 
     cm = confusion_matrix(y_val, preds)
     cm_df = pd.DataFrame(cm)
     logging.info(cm_df)
 
-    fig, ax = plt.subplots(figsize=(6, 6))
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
-    disp.plot(ax=ax)
-    plt.savefig(CONF_MAT_OUTPATH, dpi=300)
-    wandb.log({"confusion matrix": wandb.Image(str(CONF_MAT_OUTPATH))})
+    # fig, ax = plt.subplots(figsize=(6, 6))
+    # disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
+    # disp.plot(ax=ax)
+    # plt.savefig(CONF_MAT_OUTPATH, dpi=300)
+    # wandb.log({"confusion matrix": wandb.Image(str(CONF_MAT_OUTPATH))})
 
-    # Log confusion matrix
-    wb_confusion_matrix = wandb.Table(data=cm_df, columns=["0", "1"])
-    wandb.log({"confusion_matrix": wb_confusion_matrix})
+    # # Log confusion matrix
+    # wb_confusion_matrix = wandb.Table(data=cm_df, columns=["0", "1"])
+    # wandb.log({"confusion_matrix": wb_confusion_matrix})
 
     logging.info("Recording errors...")
     record_errors(
@@ -216,8 +216,12 @@ def main():
     X_train = X_train["sentence"].tolist()
     X_val = X_val["sentence"].tolist()
 
-    accuracy, cm = train(wandb.config, X_train, X_val, y_train, y_val)
+    accuracy, recall, f1_score, cm = train(wandb.config, X_train, X_val, y_train, y_val)
     wandb.log({"accuracy": accuracy})
+
+    wandb.run.summary["accuracy"] = accuracy
+    wandb.run.summary["f1_score"] = f1_score
+    wandb.run.summary["recall"] = recall
 
     # Log confusion matrix
     wb_confusion_matrix = wandb.Table(data=cm, columns=["0", "1"])
