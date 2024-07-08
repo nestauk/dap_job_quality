@@ -27,11 +27,13 @@ from dap_job_quality.utils import jobbert
 load_dotenv()
 
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/log_reg_confusion_matrix.png"
+CONF_MAT_OUTPATH.mkdir(parents=True, exist_ok=True)
 
 SEED = 42
+N_RUNS = 30
 
 sweep_config = {
-    "method": "bayes",
+    "method": "random",
     "metric": {"name": "recall", "goal": "maximize"},
     "parameters": {
         "embedding_model": {
@@ -47,16 +49,7 @@ sweep_config = {
     },
 }
 
-# LOG_REG_PARAMS = {
-#     "penalty": "l2",
-#     "solver": "liblinear",
-#     "random_state": 42,
-#     "max_iter": 100,
-# }
-
 PCA_VAR = 0.95
-
-# MODEL = "sentence-transformers/all-MiniLM-L6-v2" #"jjzha/jobbert-base-cased"
 
 
 def record_errors(
@@ -150,25 +143,19 @@ def train(config, X_train, X_val_df, y_train, y_val):
     recall = recall_score(y_val, preds)
     f1 = f1_score(y_val, preds)
 
-    # wandb.run.summary["accuracy"] = accuracy_score(y_val, preds)
-    # wandb.run.summary["f1_score"] = f1_score(y_val, preds)
-    # wandb.run.summary["recall"] = recall_score(
-    #     y_val, preds
-    # )  # we would like better recall please
-
     cm = confusion_matrix(y_val, preds)
     cm_df = pd.DataFrame(cm)
     logging.info(cm_df)
 
-    # fig, ax = plt.subplots(figsize=(6, 6))
-    # disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
-    # disp.plot(ax=ax)
-    # plt.savefig(CONF_MAT_OUTPATH, dpi=300)
-    # wandb.log({"confusion matrix": wandb.Image(str(CONF_MAT_OUTPATH))})
+    fig, ax = plt.subplots(figsize=(6, 6))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
+    disp.plot(ax=ax)
+    plt.savefig(CONF_MAT_OUTPATH, dpi=300)
+    wandb.log({"confusion matrix": wandb.Image(str(CONF_MAT_OUTPATH))})
 
-    # # Log confusion matrix
-    # wb_confusion_matrix = wandb.Table(data=cm_df, columns=["0", "1"])
-    # wandb.log({"confusion_matrix": wb_confusion_matrix})
+    # Log confusion matrix
+    wb_confusion_matrix = wandb.Table(data=cm_df, columns=["0", "1"])
+    wandb.log({"confusion_matrix": wb_confusion_matrix})
 
     logging.info("Recording errors...")
     record_errors(
@@ -230,8 +217,9 @@ def main():
     wandb.run.summary["recall"] = recall
 
     # Log confusion matrix
-    wb_confusion_matrix = wandb.Table(data=cm, columns=["0", "1"])
-    wandb.log({"confusion_matrix": wb_confusion_matrix})
+
+    # wb_confusion_matrix = wandb.Table(data=cm, columns=["0", "1"])
+    # wandb.log({"confusion_matrix": wb_confusion_matrix})
 
 
 if __name__ == "__main__":
@@ -239,4 +227,4 @@ if __name__ == "__main__":
         sweep=sweep_config, entity="nesta-uk", project="dap-job-quality"
     )
 
-    wandb.agent(sweep_id, function=main, count=100)
+    wandb.agent(sweep_id, function=main, count=30)
