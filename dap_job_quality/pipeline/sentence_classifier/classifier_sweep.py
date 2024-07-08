@@ -1,5 +1,10 @@
 from datetime import datetime
 from dotenv import load_dotenv
+import matplotlib
+
+matplotlib.use(
+    "Agg"
+)  # Use a non-interactive backend for matplotlib so that it (hopefully) works on EC2
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -147,11 +152,11 @@ def train(config, X_train, X_val_df, y_train, y_val):
     cm_df = pd.DataFrame(cm)
     logging.info(cm_df)
 
-    # fig, ax = plt.subplots(figsize=(6, 6))
-    # disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
-    # disp.plot(ax=ax)
-    # plt.savefig(CONF_MAT_OUTPATH, dpi=300)
-    # wandb.log({"confusion matrix": wandb.Image(str(CONF_MAT_OUTPATH))})
+    fig, ax = plt.subplots(figsize=(6, 6))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
+    disp.plot(ax=ax)
+    plt.savefig(CONF_MAT_OUTPATH, dpi=300)
+    wandb.log({"confusion matrix": wandb.Image(str(CONF_MAT_OUTPATH))})
 
     # Log confusion matrix
     wb_confusion_matrix = wandb.Table(data=cm_df, columns=["0", "1"])
