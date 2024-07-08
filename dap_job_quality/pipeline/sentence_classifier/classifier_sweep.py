@@ -31,7 +31,7 @@ from dap_job_quality.utils import jobbert
 
 load_dotenv()
 
-CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/log_reg_confusion_matrix.png"
+CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/"
 CONF_MAT_OUTPATH.mkdir(parents=True, exist_ok=True)
 
 SEED = 42
@@ -155,8 +155,14 @@ def train(config, X_train, X_val_df, y_train, y_val):
     fig, ax = plt.subplots(figsize=(6, 6))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
     disp.plot(ax=ax)
-    plt.savefig(CONF_MAT_OUTPATH, dpi=300)
-    wandb.log({"confusion matrix": wandb.Image(str(CONF_MAT_OUTPATH))})
+    plt.savefig(CONF_MAT_OUTPATH / "log_reg_confusion_matrix.png", dpi=300)
+    wandb.log(
+        {
+            "confusion matrix": wandb.Image(
+                str(CONF_MAT_OUTPATH / "log_reg_confusion_matrix.png")
+            )
+        }
+    )
 
     # Log confusion matrix
     wb_confusion_matrix = wandb.Table(data=cm_df, columns=["0", "1"])
