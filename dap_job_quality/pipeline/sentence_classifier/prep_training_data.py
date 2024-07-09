@@ -294,7 +294,7 @@ if __name__ == "__main__":
     save_to_s3(
         BUCKET_NAME,
         all_data,
-        f"job_quality/sentence_classifier/inputs/labellied/train_val_test_{TODAY}.csv",
+        f"job_quality/sentence_classifier/inputs/labelled/train_val_test_{TODAY}.csv",
     )
 
     train_ids, val_ids, test_ids = get_split_ids(all_data)
