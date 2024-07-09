@@ -28,14 +28,34 @@ load_dotenv()
 
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/log_reg_confusion_matrix.png"
 
-LOG_REG_PARAMS = {
-    "penalty": "l2",
-    "solver": "liblinear",
-    "random_state": 42,
-    "max_iter": 100,
+SEED = 42
+
+sweep_config = {
+    "method": "bayes",
+    "metric": {"name": "recall", "goal": "maximize"},
+    "parameters": {
+        "embedding_model": {
+            "values": [
+                "sentence-transformers/all-MiniLM-L6-v2",
+                "jjzha/jobbert-base-cased",
+            ]
+        },
+        "penalty": {"values": ["l1", "l2"]},
+        "C": {"values": [0.01, 0.1, 1, 10, 100]},
+        "max_iter": {"values": [100, 200, 300, 500]},
+    },
 }
 
+# LOG_REG_PARAMS = {
+#     "penalty": "l2",
+#     "solver": "liblinear",
+#     "random_state": 42,
+#     "max_iter": 100,
+# }
+
 PCA_VAR = 0.95
+
+# MODEL = "sentence-transformers/all-MiniLM-L6-v2" #"jjzha/jobbert-base-cased"
 
 
 def record_errors(
@@ -87,6 +107,49 @@ def record_errors(
     if log_wandb and run is not None:
         wb_errors = wandb.Table(data=errors_df)
         run.log({f"false_{type}": wb_errors})
+
+
+def train(config, X_train, X_val, y_train, y_val):
+    scaler = StandardScaler()
+
+    # Embed sentences
+    X_train = jobbert.embed_sentences(X_train, model_name=config["embedding_model"])
+    X_val = jobbert.embed_sentences(X_val)
+
+    # Convert embeddings from list of arrays into a single numpy array
+    X_train = np.vstack(X_train)
+    X_train = scaler.fit_transform(X_train)
+    X_val = np.vstack(X_val)
+    X_val = scaler.transform(X_val)
+
+    logging.info("Reducing dimensionality with PCA...")
+    pca = PCA(n_components=PCA_VAR, random_state=SEED)
+    X_train_pca = pca.fit_transform(X_train)
+    pickle.dump(
+        pca, open(PROJECT_DIR / "outputs/models/sentence_classifier/pca.pkl", "wb")
+    )
+    save_to_s3(BUCKET_NAME, pca, "job_quality/sentence_classifier/outputs/pca.pkl")
+    X_val_pca = pca.transform(X_val)
+    logging.info(X_train_pca.shape)
+
+    # Build the model
+    model = LogisticRegression(
+        C=config["C"],
+        max_iter=config["max_iter"],
+        penalty=config["penalty"],
+        random_state=SEED,
+    )
+    logging.info("Fitting a logistic regression model...")
+    model.fit(X_train_pca, y_train)
+
+    # Predict and evaluate
+    preds = model.predict(X_val_pca)
+    accuracy = accuracy_score(y_val, preds)
+
+    cm = confusion_matrix(y_val, preds)
+    cm = pd.DataFrame(cm)
+
+    return accuracy, cm
 
 
 if __name__ == "__main__":

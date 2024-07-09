@@ -28,11 +28,13 @@ import wandb
 from dap_job_quality import BUCKET_NAME, logging, config, PROJECT_DIR
 from dap_job_quality.getters.data_getters import load_s3_data, save_to_s3
 from dap_job_quality.utils import jobbert
+from dap_job_quality.pipeline.sentence_classifier.classifier_utils import (
+    log_confusion_matrix_img,
+)
 
 load_dotenv()
 
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/"
-CONF_MAT_OUTPATH.mkdir(parents=True, exist_ok=True)
 
 SEED = 42
 N_RUNS = 30
@@ -208,7 +210,11 @@ def main():
     y_train = load_s3_data(
         BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/train_df.parquet"
     )["label"]
-    # y_train_writeable = np.copy(y_train)
+
+    logging.info(
+        f"Train label distribution: {y_train.value_counts()} \n (Should be 0: 533; 1: 577)"
+    )
+
     y_val = load_s3_data(
         BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/val_df.parquet"
     )["label"]
@@ -227,15 +233,10 @@ def main():
     wandb.run.summary["f1_score"] = f1
     wandb.run.summary["recall"] = recall
 
-    # Log confusion matrix
-
-    # wb_confusion_matrix = wandb.Table(data=cm, columns=["0", "1"])
-    # wandb.log({"confusion_matrix": wb_confusion_matrix})
-
 
 if __name__ == "__main__":
     sweep_id = wandb.sweep(
         sweep=sweep_config, entity="nesta-uk", project="dap-job-quality"
     )
 
-    wandb.agent(sweep_id, function=main, count=30)
+    wandb.agent(sweep_id, function=main, count=1)

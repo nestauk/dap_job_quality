@@ -12,6 +12,7 @@ from pandas import DataFrame
 from pathlib import Path
 import pickle
 import srsly
+import tarfile
 from typing import List, Dict, Optional
 import yaml
 
@@ -271,6 +272,12 @@ def download_from_s3(bucket_name, object_name, file_name):
     s3_client.download_file(bucket_name, object_name, file_name)
 
 
+def extract_tar_gz(tar_gz_path, extract_path):
+    with tarfile.open(tar_gz_path, "r:gz") as tar:
+        tar.extractall(path=extract_path)
+    print(f"Extracted {tar_gz_path} to {extract_path}")
+
+
 def get_s3_data_paths(bucket_name: str, root: str, file_types=["*.jsonl"]):
     """
     Get all paths to particular file types in a S3 root location
@@ -306,3 +313,56 @@ def load_s3_excel(bucket_name: str, file_name: str, sheet_name: str = "All"):
         Loaded data (df)
     """
     return pd.read_excel("s3://" + bucket_name + "/" + file_name, sheet_name=sheet_name)
+
+
+def upload_file_to_s3(file_name, bucket, object_name=None):
+    """
+    Upload a file to an S3 bucket
+
+    :param file_name: File to upload
+    :param bucket: Bucket to upload to
+    :param object_name: S3 object name. If not specified then file_name is used
+    :return: True if file was uploaded, else False
+    """
+
+    # If S3 object_name was not specified, use file_name
+    if object_name is None:
+        object_name = file_name
+
+    # Upload the file
+    s3_client = boto3.client("s3")
+    try:
+        s3_client.upload_file(file_name, bucket, object_name)
+    except Exception as e:
+        print(f"Failed to upload {file_name} to {bucket}/{object_name}: {e}")
+        return False
+    return True
+
+
+def download_and_extract_from_s3(
+    s3_key, output_dir=PROJECT_DIR / "outputs/models/", s3_bucket=BUCKET_NAME
+):
+    """Downloads and extracts a tar.gz file from S3
+
+    Args:
+        s3_bucket (str): Name of the S3 bucket
+        s3_key (str): S3 key of the tar.gz file
+        output_dir (str): Directory to save and extract the files
+
+    Returns:
+        None
+    """
+
+    # Ensure output directory exists
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    # Download the tar.gz file
+    tarball_path = os.path.join(output_dir, os.path.basename(s3_key))
+    download_from_s3(bucket_name=s3_bucket, object_name=s3_key, file_name=tarball_path)
+
+    # Extract the tar.gz file
+    with tarfile.open(tarball_path, "r:gz") as tar:
+        tar.extractall(path=output_dir)
+
+    # Clean up the tar.gz file
+    os.remove(tarball_path)
