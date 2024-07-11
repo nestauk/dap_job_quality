@@ -1,4 +1,11 @@
-from datetime import datetime
+"""
+Executes a hyperparameter sweep for a logistic regression classifier on sentence embeddings.
+
+Usage:
+```
+python dap_job_quality/pipeline/sentence_classifier/classifier_sweep.py
+```
+"""
 from dotenv import load_dotenv
 import matplotlib
 
@@ -7,13 +14,11 @@ matplotlib.use(
 )  # Use a non-interactive backend for matplotlib so that it (hopefully) works on EC2
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import pandas as pd
 from pathlib import Path
 import pickle
 from sklearn.decomposition import PCA
 from sklearn.metrics import (
-    classification_report,
     confusion_matrix,
     ConfusionMatrixDisplay,
     accuracy_score,
@@ -37,7 +42,7 @@ load_dotenv()
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/"
 
 SEED = 42
-N_RUNS = 30
+N_RUNS = 30  # number of runs to do with a random combination of hyperparameters
 
 sweep_config = {
     "method": "random",
@@ -219,14 +224,12 @@ def main():
         BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/val_df.parquet"
     )["label"]
 
-    # X_val_df = X_val.copy()
-
     X_train = X_train["sentence"].tolist()
     X_val_df = (
         X_val.copy()
     )  # For the sake of relating predictions back to the original df and recording errors
 
-    accuracy, recall, f1, cm = train(wandb.config, X_train, X_val_df, y_train, y_val)
+    accuracy, recall, f1, _ = train(wandb.config, X_train, X_val_df, y_train, y_val)
     wandb.log({"accuracy": accuracy})
 
     wandb.run.summary["accuracy"] = accuracy
@@ -239,4 +242,4 @@ if __name__ == "__main__":
         sweep=sweep_config, entity="nesta-uk", project="dap-job-quality"
     )
 
-    wandb.agent(sweep_id, function=main, count=1)
+    wandb.agent(sweep_id, function=main, count=N_RUNS)
