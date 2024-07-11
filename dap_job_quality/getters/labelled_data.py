@@ -44,18 +44,27 @@ def get_older_labelled_data():
 
 
 def get_concat_labelled_data():
+    """
+    Produced by `dap_job_quality/pipeline/sentence_classifier/prep_training_data.py`
+    """
     return pd.read_csv(
         "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labellied/train_val_test_20240703.csv"
     )
 
 
 def get_positive_sents_labelled_for_categories():
+    """
+    Labelled [here](https://docs.google.com/spreadsheets/d/1bXNmO9vOLG6zdDpHl0Tdw9AeDqb43CrpkXzNGyHRhWI/edit?gid=4769099#gid=4769099)
+    """
     return pd.read_csv(
         "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/positive_sents_for_labelling - positive_sents_for_labelling.csv"
     )
 
 
 def get_additional_examples_underrepresented_categories():
+    """Produced by `dap_job_quality/notebooks/pad_out_sample.ipynb` and then manually labelled
+    [here](https://docs.google.com/spreadsheets/d/1s4SRbQypfUP0sY88y-NlaOJegHYv21whcBAVudS9Paw/edit?gid=1942213912#gid=1942213912)
+    """
     return pd.read_csv(
         "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/additional_green_jobs_examples_20240704_labelled.csv"
     )
