@@ -1,9 +1,12 @@
 """
 This script shows how to use the fine-tuned jobbert model for inference.
 
+The output gets saved to `PROJECT_DIR / f"outputs/data/jobbert_test_n_samples_{args.n_samples}.csv"` so
+you can check the output there if you wish.
+
 Usage:
 ```
-python dap_job_quality/pipeline/sentence_classifier/jobbert_inference.py --input_text="You will receive £1 million per hour."
+python dap_job_quality/pipeline/sentence_classifier/jobbert_inference.py --n_samples=10
 ```
 """
 import argparse
@@ -79,7 +82,7 @@ if __name__ == "__main__":
     job_adverts = get_stratified_sample()
 
     if args.n_samples <= len(job_adverts):
-        job_adverts = job_adverts.head(args.n_samples)
+        job_adverts = job_adverts.sample(args.n_samples)
     else:
         logging.info(
             f"Number of samples requested exceeds the total number of samples. Returning all {len(job_adverts)} samples."
