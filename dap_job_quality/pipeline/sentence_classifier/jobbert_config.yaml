@@ -26,5 +26,5 @@ train_config:
   save_strategy: "epoch"
   metric_for_best_model: "recall"
   load_best_model_at_end: True
-  early_stopping_patience: 3
+  early_stopping_patience: 2
   seed: 42

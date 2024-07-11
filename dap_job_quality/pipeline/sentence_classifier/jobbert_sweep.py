@@ -1,3 +1,11 @@
+"""
+This script runs a weights and biases sweep to find
+
+Usage:
+```
+python dap_job_quality/pipeline/sentence_classifier/jobbert_inference.py --input_text="You will receive £1 million per hour."
+```
+"""
 import argparse
 import matplotlib
 
@@ -90,6 +98,7 @@ def model_train():
         per_device_eval_batch_size=wandb.config.batch_size,
         num_train_epochs=1,
         weight_decay=wandb.config.weight_decay,
+        report_to="wandb",
     )
 
     trainer = Trainer(

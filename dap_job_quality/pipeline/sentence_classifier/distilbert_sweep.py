@@ -91,6 +91,7 @@ def model_train(distilbert_model=distilbert_config["model"]):
         num_train_epochs=wandb.config.epochs,
         weight_decay=wandb.config.weight_decay,
         logging_dir="./logs",
+        report_to="wandb",
     )
     # Load the model
     model = DistilBertForSequenceClassification.from_pretrained(

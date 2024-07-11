@@ -114,6 +114,7 @@ if __name__ == "__main__":
         metric_for_best_model=jobbert_config["train_config"]["metric_for_best_model"],
         load_best_model_at_end=jobbert_config["train_config"]["load_best_model_at_end"],
         seed=jobbert_config["train_config"]["seed"],
+        report_to="wandb",
     )
 
     early_stopping_callback = EarlyStoppingCallback(
