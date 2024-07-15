@@ -185,41 +185,11 @@ def saving_huggingface_model(
     )
 
 
-def saving_huggingface_tokenizer(
-    tokenizer, output_filename: str, save_path: str, s3_path: str
-):
-    """Saves a huggingface tokenizer to S3
-
-    Args:
-        tokenizer (transformers.PreTrainedTokenizer): Tokenizer to save
-        output_filename (str): Name of the file to be saved
-        save_path (str): Path to save the tokenizer to
-        s3_path (str): S3 path to upload the tokenizer to
-
-    Returns:
-        None: Saves the tokenizer locally and uploads to S3
-    """
-    if isinstance(save_path, str):
-        save_path = Path(save_path)
-    # Saving the tokenizer locally as a folder
-    save_path.mkdir(parents=True, exist_ok=True)
-    tokenizer_path = save_path / output_filename
-    tokenizer.save_pretrained(tokenizer_path)
-
-    # Converting folder to zipped file
-    tarball_path = str(tokenizer_path) + ".tar.gz"
-    make_tarfile(tarball_path, str(tokenizer_path))
-
-    # Uploading to S3
-    upload_file_to_s3(
-        path_from=tarball_path,
-        bucket=BUCKET_NAME,
-        path_to=f"{s3_path}{output_filename}.tar.gz",
-    )
-
-
 def compute_metrics(p):
-    """ """
+    """
+    This function is of the correct format to be used by a HuggingFace Trainer. As we're doing
+    binary classification, it computes the accuracy, F1, precision, and recall.
+    """
     preds = np.argmax(p.predictions, axis=1)
     precision, recall, f1, _ = precision_recall_fscore_support(
         p.label_ids, preds, average="binary"

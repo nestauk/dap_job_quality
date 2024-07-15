@@ -16,14 +16,14 @@ from nltk.tokenize import sent_tokenize
 import pandas as pd
 from time import time
 import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+from transformers import pipeline
 from typing import List, Union, Tuple
 
 from dap_job_quality import PROJECT_DIR, BUCKET_NAME
 from dap_job_quality.getters.afs_data import get_stratified_sample
-from dap_job_quality.getters.data_getters import download_and_extract_from_s3
+from dap_job_quality.getters.jobbert_jq import get_jobbert_jq
 
-MODEL_DIR_LOCAL = PROJECT_DIR / "outputs/data/models/"
+MODEL_DIR_LOCAL = PROJECT_DIR / "outputs/models/"
 
 nltk.download("punkt")
 nltk.download("stopwords")
@@ -90,18 +90,7 @@ if __name__ == "__main__":
 
     input_texts = extract_job_quality_sentences(job_adverts)
 
-    logging.info("Downloading the model...")
-    download_and_extract_from_s3(
-        "job_quality/sentence_classifier/outputs/jobbert-base-cased-jq.tar.gz",
-        MODEL_DIR_LOCAL,
-        BUCKET_NAME,
-    )
-
-    logging.info("Loading the model and tokenizer...")
-    model = AutoModelForSequenceClassification.from_pretrained(
-        MODEL_DIR_LOCAL / "jobbert-base-cased-jq", num_labels=2
-    )
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR_LOCAL / "jobbert-base-cased-jq")
+    model, tokenizer = get_jobbert_jq(model_dir=MODEL_DIR_LOCAL)
 
     # Tokenize the new data
     logging.info("Classifying texts...")

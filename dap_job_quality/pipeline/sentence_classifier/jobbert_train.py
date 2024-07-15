@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import matplotlib
 
 matplotlib.use(
@@ -45,10 +46,10 @@ from dap_job_quality.pipeline.sentence_classifier.classifier_utils import (
     load_training_args,
     saving_huggingface_model,
     compute_metrics,
-    saving_huggingface_tokenizer,
+    # saving_huggingface_tokenizer,
 )
 
-
+TODAY = datetime.today().strftime("%Y-%m-%d")
 SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
@@ -58,10 +59,18 @@ jobbert_config = get_yaml_config(
 )
 
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/"
-MODEL_NAME = "jjzha/jobbert-base-cased"
+INPUT_MODEL_NAME = "jjzha/jobbert-base-cased"
 
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=2)
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+OUTPUT_MODEL_NAME = f"jobbert-base-cased-jq-{TODAY}"
+LOCAL_SAVE_PATH = (
+    PROJECT_DIR / f"outputs/models/sentence_classifier/{OUTPUT_MODEL_NAME}"
+)
+S3_SAVE_PATH = "job_quality/sentence_classifier/outputs/"
+
+model = AutoModelForSequenceClassification.from_pretrained(
+    INPUT_MODEL_NAME, num_labels=2
+)
+tokenizer = AutoTokenizer.from_pretrained(INPUT_MODEL_NAME)
 
 if __name__ == "__main__":
     logging.info("Logging run on wandb")
@@ -160,10 +169,8 @@ if __name__ == "__main__":
     wb_errors = wandb.Table(data=errors)
     run.log({f"false_{type}": wb_errors})
 
-    SAVE_TRAINING_RESULTS_PATH = (
-        PROJECT_DIR / "outputs/models/sentence_classifier/jobbert-base-cased-jq"
+    saving_huggingface_model(
+        trainer, OUTPUT_MODEL_NAME, save_path=LOCAL_SAVE_PATH, s3_path=S3_SAVE_PATH
     )
-    trainer.save_model(SAVE_TRAINING_RESULTS_PATH)
-    tokenizer.save_pretrained(SAVE_TRAINING_RESULTS_PATH)
 
     wandb.finish()
