@@ -22,11 +22,11 @@ np.random.seed(SEED)
 
 if __name__ == "__main__":
     y_train = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_train.pkl"
-    )
+        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/train_df.parquet"
+    )[["label"]]
     y_val = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/y_val.pkl"
-    )
+        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/val_df.parquet"
+    )[["label"]]
 
     run = wandb.init(
         project="dap-job-quality",
