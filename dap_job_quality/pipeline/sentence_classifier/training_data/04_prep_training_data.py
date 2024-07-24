@@ -82,7 +82,7 @@ def process_additional_data():
     return additional_data
 
 
-def find_category_representation(additional_data):
+def find_category_representation(additional_data, positive_sents):
     additional_positives = additional_data[additional_data["label"] == 1]
     # Drop the column "subcategory"
     additional_positives = additional_positives.drop(columns=["subcategory"])
@@ -254,7 +254,7 @@ if __name__ == "__main__":
         )
 
     positive_categories, additional_positives = find_category_representation(
-        additional_data
+        additional_data, positive_sents
     )
 
     all_negatives = create_neg_sent_df(positive_sents, FALSE_NEGATIVES, additional_data)
