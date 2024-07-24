@@ -21,3 +21,19 @@ In the end, the training, validation and test sets were balanced as follows:
 | 1 | 577 | 163 | |
 
 ## Training the classifier
+
+We ran hyperparameter sweeps for the following types of model:
+
+- `classifier_sweep.py`: a logistic regression model, with the input features being the embeddings of the sentences. The hyperparameter sweep considers all-miniLM-l6-v2 sentence embeddings vs. embeddings generated from jobbert.
+- `distilbert_sweep.py`: this sweep fine-tunes a distilbert model for 1 epoch.
+- `jobbert_sweep.py`: this sweep fine-tunes a jobbert model for 1 epoch.
+
+The best performance in terms of F1 was obtained from fine-tuning jobbert, and so the script `jobbert_train.py` fine-tunes jobbert with the best hyperparameters found in the sweep.
+
+_Note that a weights and biases account is needed to run these scripts._
+
+## Inference from the classifier
+
+To make predictions using the classifier on a random sample of OJO job adverts run:
+
+python dap_job_quality/pipeline/sentence_classifier/jobbert_inference.py --n_samples=1000
