@@ -43,17 +43,10 @@ def get_older_labelled_data():
     ]  # it's a nested list for some reason
 
 
-def get_concat_labelled_data():
-    """
-    Produced by `dap_job_quality/pipeline/sentence_classifier/prep_training_data.py`
-    """
-    return pd.read_csv(
-        "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labellied/train_val_test_20240703.csv"
-    )
-
-
 def get_positive_sents_labelled_for_categories():
     """
+    Originally produced by `dap_job_quality/pipeline/sentence_classifier/training_data/01_concat_data.py`
+
     Labelled [here](https://docs.google.com/spreadsheets/d/1bXNmO9vOLG6zdDpHl0Tdw9AeDqb43CrpkXzNGyHRhWI/edit?gid=4769099#gid=4769099)
     """
     return pd.read_csv(
@@ -67,4 +60,16 @@ def get_additional_examples_underrepresented_categories():
     """
     return pd.read_csv(
         "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/additional_green_jobs_examples_20240704_labelled.csv"
+    )
+
+
+def get_search_terms_for_small_categories():
+    """
+    We identified what proportion of the labelled data was made up by which categories. We then labelled
+    the underrepresented categories with some search terms that we could use to pad out data for these categories.
+
+    See this Google Sheet: https://docs.google.com/spreadsheets/d/1DuD3f2V4Ffm-JyibpFaZ_tFlh7U5SlwJFi6rJxRaJ_w/edit?gid=206573346#gid=206573346
+    """
+    return pd.read_csv(
+        "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/category_representation - category_representation.csv"
     )

@@ -7,6 +7,7 @@ from dap_job_quality import BUCKET_NAME
 from dap_job_quality.getters.data_getters import load_s3_data, save_to_s3
 from dap_job_quality.getters.labelled_data import (
     get_positive_sents_labelled_for_categories,
+    get_search_terms_for_small_categories,
 )
 from dap_job_quality.getters.ojo_getters import get_ojo_sample
 from dap_job_quality.utils import text_cleaning as tc
@@ -33,7 +34,7 @@ if __name__ == "__main__":
         get_positive_sents_labelled_for_categories()["id"].unique().tolist()
     )
 
-    categories = pd.read_csv("category_representation - category_representation.csv")
+    categories = get_search_terms_for_small_categories()
     categories = categories.dropna(subset=["search_terms"])
     categories["search_terms"] = categories["search_terms"].apply(ast.literal_eval)
     categories = categories.explode("search_terms")
