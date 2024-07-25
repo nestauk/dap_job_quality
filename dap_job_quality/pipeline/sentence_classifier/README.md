@@ -17,8 +17,8 @@ The scripts in `training_data/` contain the code that we used to prepare and aug
 In the end, the training, validation and test sets were balanced as follows:
 | | Training| Validation | Test |
 |----------|----------|----------|----------|
-| 0 | 533 | 164 | |
-| 1 | 577 | 163 | |
+| 0 | 570 | 100 | 123 |
+| 1 | 615 | 115 | 127 |
 
 ## Training the classifier
 
