@@ -73,6 +73,20 @@ model = AutoModelForSequenceClassification.from_pretrained(
 tokenizer = AutoTokenizer.from_pretrained(INPUT_MODEL_NAME)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Script to run with command line arguments."
+    )
+
+    parser.add_argument(
+        "--production",
+        default=False,
+        type=bool,
+        help="Run in production mode and save the model?",
+    )
+
+    args = parser.parse_args()
+    logging.info(args)
+
     logging.info("Logging run on wandb")
     run = wandb.init(
         reinit=True,
@@ -117,6 +131,7 @@ if __name__ == "__main__":
         gradient_accumulation_steps=jobbert_config["train_config"][
             "gradient_accumulation_steps"
         ],
+        weight_decay=jobbert_config["train_config"]["weight_decay"],
         num_train_epochs=jobbert_config["train_config"]["num_train_epochs"],
         evaluation_strategy=jobbert_config["train_config"]["evaluation_strategy"],
         save_strategy=jobbert_config["train_config"]["save_strategy"],
@@ -167,10 +182,11 @@ if __name__ == "__main__":
     val_df["predictions"] = y_pred
     errors = val_df[val_df["labels"] != val_df["predictions"]]
     wb_errors = wandb.Table(data=errors)
-    run.log({f"false_{type}": wb_errors})
+    run.log({f"errors": wb_errors})
 
-    saving_huggingface_model(
-        trainer, OUTPUT_MODEL_NAME, save_path=LOCAL_SAVE_PATH, s3_path=S3_SAVE_PATH
-    )
+    if args.production == True:
+        saving_huggingface_model(
+            trainer, OUTPUT_MODEL_NAME, save_path=LOCAL_SAVE_PATH, s3_path=S3_SAVE_PATH
+        )
 
     wandb.finish()

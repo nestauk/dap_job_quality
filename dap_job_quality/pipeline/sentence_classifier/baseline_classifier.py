@@ -22,10 +22,12 @@ np.random.seed(SEED)
 
 if __name__ == "__main__":
     y_train = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/train_df.parquet"
+        BUCKET_NAME,
+        "job_quality/sentence_classifier/inputs/labelled/train_df_20240725.parquet",
     )[["label"]]
     y_val = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/val_df.parquet"
+        BUCKET_NAME,
+        "job_quality/sentence_classifier/inputs/labelled/val_df_20240725.parquet",
     )[["label"]]
 
     run = wandb.init(

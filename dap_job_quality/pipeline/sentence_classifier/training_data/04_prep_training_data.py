@@ -1,7 +1,9 @@
 import ast
 import altair as alt
 from datetime import datetime
+import numpy as np
 import pandas as pd
+import random
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
 from sklearn.model_selection import train_test_split
@@ -18,6 +20,9 @@ model = SentenceTransformer("all-MiniLM-L6-v2")
 
 SEED = 42
 TODAY = datetime.today().strftime("%Y%m%d")
+
+np.random.seed(SEED)
+random.seed(SEED)
 
 FALSE_NEGATIVES = [
     "Basic entitlement is 30.0 days (pro rata for hours worked).",
@@ -172,7 +177,7 @@ def sample_negative_sents(all_negatives, n_positives, num_clusters=50):
 
     num_clusters = num_clusters
 
-    kmeans = KMeans(n_clusters=num_clusters)
+    kmeans = KMeans(n_clusters=num_clusters, random_state=SEED)
     clusters = kmeans.fit_predict(embeddings_2d)
 
     # assign the cluster names back into the dataframe
@@ -309,10 +314,10 @@ if __name__ == "__main__":
         save_to_s3(
             BUCKET_NAME,
             ids,
-            f"job_quality/sentence_classifier/inputs/labelled/{split_name}_ids.parquet",
+            f"job_quality/sentence_classifier/inputs/labelled/{split_name}_ids_{TODAY}.parquet",
         )
         save_to_s3(
             BUCKET_NAME,
             split_data,
-            f"job_quality/sentence_classifier/inputs/labelled/{split_name}_df.parquet",
+            f"job_quality/sentence_classifier/inputs/labelled/{split_name}_df_{TODAY}.parquet",
         )

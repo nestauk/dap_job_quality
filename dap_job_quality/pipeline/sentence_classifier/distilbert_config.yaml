@@ -4,7 +4,7 @@ max_length: 81
 sweep_config:
   method: random
   metric:
-    name: recall
+    name: f1_score
     goal: maximize
   parameters:
     epochs:

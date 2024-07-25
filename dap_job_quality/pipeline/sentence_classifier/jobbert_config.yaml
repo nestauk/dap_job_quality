@@ -4,7 +4,7 @@ max_length: 81
 sweep_config:
   method: random
   metric:
-    name: recall
+    name: f1_score
     goal: maximize
   parameters:
     epochs:
@@ -21,10 +21,11 @@ train_config:
   per_device_train_batch_size: 32
   per_device_eval_batch_size: 32
   gradient_accumulation_steps: 2
+  weight_decay: 0.1
   num_train_epochs: 10
   evaluation_strategy: "epoch"
   save_strategy: "epoch"
-  metric_for_best_model: "recall"
+  metric_for_best_model: "f1"
   load_best_model_at_end: True
   early_stopping_patience: 2
-  seed: 42
+  seed: 1

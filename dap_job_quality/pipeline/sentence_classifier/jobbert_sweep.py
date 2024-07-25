@@ -49,6 +49,7 @@ from dap_job_quality.pipeline.sentence_classifier.classifier_utils import (
     log_confusion_matrix_table,
     log_summary_metrics,
     get_best_hyperparams,
+    compute_metrics,
 )
 
 
@@ -68,7 +69,7 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
 
 def model_train():
-    run = wandb.init()
+    run = wandb.init(tags=["jobbert", "sentence-classification"])
     run.log_code()
 
     train_df, val_df = load_datasets_for_hf()
@@ -108,6 +109,7 @@ def model_train():
         eval_dataset=tokenized_val_dataset,
         tokenizer=tokenizer,
         data_collator=data_collator,
+        compute_metrics=compute_metrics,
     )
 
     trainer.train()
@@ -123,6 +125,11 @@ def model_train():
     y_pred = np.argmax(probs, axis=-1)
     # get true labels
     y_true = tokenized_val_dataset["labels"]
+
+    val_df["predictions"] = y_pred
+    errors = val_df[val_df["labels"] != val_df["predictions"]]
+    wb_errors = wandb.Table(data=errors)
+    run.log({f"errors": wb_errors})
 
     log_summary_metrics(y_val=y_true, y_pred=y_pred, run=run)
 
@@ -154,7 +161,7 @@ if __name__ == "__main__":
 
     get_best_hyperparams(
         sweep_id,
-        eval_metric="recall",
+        eval_metric="eval/f1",
         params=["learning_rate", "batch_size", "weight_decay"],
         outpath=PROJECT_DIR / "outputs/models/",
         outfile=f"jobbert_best_varied_hyperparameters_sweep_{sweep_id}.json",

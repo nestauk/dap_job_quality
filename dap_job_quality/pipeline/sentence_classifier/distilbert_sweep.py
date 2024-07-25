@@ -37,6 +37,7 @@ from dap_job_quality.pipeline.sentence_classifier.classifier_utils import (
     log_confusion_matrix_table,
     log_summary_metrics,
     get_best_hyperparams,
+    compute_metrics,
 )
 
 
@@ -56,7 +57,8 @@ max_length = distilbert_config["max_length"]
 
 
 def model_train(distilbert_model=distilbert_config["model"]):
-    run = wandb.init()
+    run = wandb.init(tags=["distilbert", "sentence-classification"])
+    run.log_code()
 
     train_df, val_df = load_datasets_for_hf()
 
@@ -104,6 +106,7 @@ def model_train(distilbert_model=distilbert_config["model"]):
         args=training_args,
         train_dataset=tokenized_train_dataset,
         eval_dataset=tokenized_val_dataset,
+        compute_metrics=compute_metrics,
     )
 
     # Train the model
@@ -132,6 +135,11 @@ def model_train(distilbert_model=distilbert_config["model"]):
 
     # Create a dataframe with errors
     val_errors = val_df[val_df["error"] == True]
+
+    val_df["predictions"] = predicted_labels
+    errors = val_df[val_df["labels"] != val_df["predictions"]]
+    wb_errors = wandb.Table(data=errors)
+    run.log({f"errors": wb_errors})
 
     # Upload val_errors to W&B as an artifact
     val_errors_artifact = wandb.Artifact("validation_errors", type="dataset")
@@ -166,7 +174,7 @@ if __name__ == "__main__":
 
     get_best_hyperparams(
         sweep_id,
-        eval_metric="recall",
+        eval_metric="f1_score",
         params=["learning_rate", "batch_size", "weight_decay"],
         outpath=PROJECT_DIR / "outputs/models/",
         outfile=f"distilbert_best_varied_hyperparameters_sweep_{sweep_id}.json",

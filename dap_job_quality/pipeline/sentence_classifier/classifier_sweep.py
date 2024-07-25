@@ -207,13 +207,16 @@ def main():
 
     logging.info("Loading data...")
     X_train = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/train_df.parquet"
+        BUCKET_NAME,
+        "job_quality/sentence_classifier/inputs/labelled/train_df_20240725.parquet",
     ).drop(["label"], axis=1)
     X_val = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/val_df.parquet"
+        BUCKET_NAME,
+        "job_quality/sentence_classifier/inputs/labelled/val_df_20240725.parquet",
     ).drop(["label"], axis=1)
     y_train = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/train_df.parquet"
+        BUCKET_NAME,
+        "job_quality/sentence_classifier/inputs/labelled/train_df_20240725.parquet",
     )["label"]
 
     logging.info(
@@ -221,7 +224,8 @@ def main():
     )
 
     y_val = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/val_df.parquet"
+        BUCKET_NAME,
+        "job_quality/sentence_classifier/inputs/labelled/val_df_20240725.parquet",
     )["label"]
 
     X_train = X_train["sentence"].tolist()

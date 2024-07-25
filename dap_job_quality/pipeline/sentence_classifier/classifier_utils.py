@@ -25,7 +25,11 @@ import wandb
 
 
 from dap_job_quality import BUCKET_NAME, logging, PROJECT_DIR
-from dap_job_quality.getters.data_getters import load_s3_data, upload_file_to_s3
+from dap_job_quality.getters.data_getters import (
+    load_s3_data,
+    upload_file_to_s3,
+    save_to_s3,
+)
 
 
 def log_confusion_matrix_img(cm, outpath, filename):
@@ -48,10 +52,12 @@ def log_confusion_matrix_table(cm):
 
 def load_datasets_for_hf():
     train_df = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/train_df.parquet"
+        BUCKET_NAME,
+        "job_quality/sentence_classifier/inputs/labelled/train_df_20240725.parquet",
     )
     val_df = load_s3_data(
-        BUCKET_NAME, "job_quality/sentence_classifier/inputs/labelled/val_df.parquet"
+        BUCKET_NAME,
+        "job_quality/sentence_classifier/inputs/labelled/val_df_20240725.parquet",
     )
 
     train_df.rename(columns={"label": "labels"}, inplace=True)
@@ -85,10 +91,11 @@ def log_summary_metrics(y_val, y_pred, run):
 
 def get_best_hyperparams(
     sweep_id,
+    model,
     eval_metric="eval/recall",
     params=["learning_rate", "batch_size", "weight_decay"],
     outpath=PROJECT_DIR / "outputs/models/",
-    outfile="best_varied_hyperparameters.json",
+    outfile="best_varied_hyperparameters_model_{model}_sweep_{sweep_id}.json",
     entity="nesta-uk",
     project_name="dap-job-quality",
 ):
@@ -97,6 +104,8 @@ def get_best_hyperparams(
 
     # Get the sweep
     sweep = api.sweep(f"{entity}/{project_name}/{sweep_id}")
+
+    outfile = outfile.format(sweep_id=sweep_id, model=model)
 
     # Retrieve all runs in the sweep
     runs = sweep.runs
@@ -122,6 +131,12 @@ def get_best_hyperparams(
         # Save the varied hyperparameters to a JSON file
         with open(f"{outpath}/{outfile}", "w") as f:
             json.dump(varied_hyperparameters, f, indent=4)
+
+        save_to_s3(
+            BUCKET_NAME,
+            varied_hyperparameters,
+            f"job_quality/sentence_classifier/outputs/sweeps/{outfile}",
+        )
 
     else:
         print("No best run found.")
