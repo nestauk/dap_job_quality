@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     get_best_hyperparams(
         sweep_id,
-        eval_metric="f1_score",
+        eval_metric="eval/f1",
         params=["learning_rate", "batch_size", "weight_decay"],
         outpath=PROJECT_DIR / "outputs/models/",
         outfile=f"distilbert_best_varied_hyperparameters_sweep_{sweep_id}.json",

@@ -83,7 +83,7 @@ def tokenize_function(examples, tokenizer, max_length=128):
 
 def log_summary_metrics(y_val, y_pred, run):
     run.summary["accuracy"] = accuracy_score(y_val, y_pred)
-    run.summary["f1_score"] = f1_score(y_val, y_pred)
+    run.summary["f1"] = f1_score(y_val, y_pred)
     run.summary["recall"] = recall_score(
         y_val, y_pred
     )  # we would like better recall please
@@ -91,7 +91,6 @@ def log_summary_metrics(y_val, y_pred, run):
 
 def get_best_hyperparams(
     sweep_id,
-    model,
     eval_metric="eval/recall",
     params=["learning_rate", "batch_size", "weight_decay"],
     outpath=PROJECT_DIR / "outputs/models/",
@@ -104,8 +103,6 @@ def get_best_hyperparams(
 
     # Get the sweep
     sweep = api.sweep(f"{entity}/{project_name}/{sweep_id}")
-
-    outfile = outfile.format(sweep_id=sweep_id, model=model)
 
     # Retrieve all runs in the sweep
     runs = sweep.runs

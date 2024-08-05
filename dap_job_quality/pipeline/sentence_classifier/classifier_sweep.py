@@ -24,6 +24,7 @@ from sklearn.metrics import (
     accuracy_score,
     f1_score,
     recall_score,
+    precision_score,
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
@@ -46,7 +47,7 @@ N_RUNS = 30  # number of runs to do with a random combination of hyperparameters
 
 sweep_config = {
     "method": "random",
-    "metric": {"name": "recall", "goal": "maximize"},
+    "metric": {"name": "f1", "goal": "maximize"},
     "parameters": {
         "embedding_model": {
             "values": [
@@ -154,6 +155,7 @@ def train(config, X_train, X_val_df, y_train, y_val):
     accuracy = accuracy_score(y_val, preds)
     recall = recall_score(y_val, preds)
     f1 = f1_score(y_val, preds)
+    precision = precision_score(y_val, preds)
 
     cm = confusion_matrix(y_val, preds)
     cm_df = pd.DataFrame(cm)
@@ -193,7 +195,7 @@ def train(config, X_train, X_val_df, y_train, y_val):
         outpath=PROJECT_DIR / "outputs/data/log_reg_false_positives.csv",
     )
 
-    return accuracy, recall, f1, cm
+    return accuracy, recall, f1, precision, cm
 
 
 def main():
@@ -219,9 +221,7 @@ def main():
         "job_quality/sentence_classifier/inputs/labelled/train_df_20240725.parquet",
     )["label"]
 
-    logging.info(
-        f"Train label distribution: {y_train.value_counts()} \n (Should be 0: 533; 1: 577)"
-    )
+    logging.info(f"Train label distribution: {y_train.value_counts()}")
 
     y_val = load_s3_data(
         BUCKET_NAME,
@@ -233,12 +233,18 @@ def main():
         X_val.copy()
     )  # For the sake of relating predictions back to the original df and recording errors
 
-    accuracy, recall, f1, _ = train(wandb.config, X_train, X_val_df, y_train, y_val)
+    accuracy, recall, f1, precision, _ = train(
+        wandb.config, X_train, X_val_df, y_train, y_val
+    )
     wandb.log({"accuracy": accuracy})
+    wandb.log({"f1": f1})
+    wandb.log({"precision": precision})
+    wandb.log({"recall": recall})
 
     wandb.run.summary["accuracy"] = accuracy
-    wandb.run.summary["f1_score"] = f1
+    wandb.run.summary["f1"] = f1
     wandb.run.summary["recall"] = recall
+    wandb.run.summary["precision"] = precision
 
 
 if __name__ == "__main__":

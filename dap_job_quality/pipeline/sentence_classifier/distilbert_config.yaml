@@ -4,7 +4,7 @@ max_length: 81
 sweep_config:
   method: random
   metric:
-    name: f1_score
+    name: f1
     goal: maximize
   parameters:
     epochs:
