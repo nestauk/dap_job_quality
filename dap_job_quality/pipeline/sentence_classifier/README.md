@@ -26,7 +26,7 @@ We ran hyperparameter sweeps for the following types of model:
 - `distilbert_sweep.py`: this sweep fine-tunes a distilbert model for 1 epoch.
 - `jobbert_sweep.py`: this sweep fine-tunes a jobbert model for 1 epoch.
 
-The performance of the best run (highest F1) from each of these hyperparameter sweeps is displayed in the table below.
+The performance of the best run (highest F1, evaluated on the validation set) from each of these hyperparameter sweeps is displayed in the table below.
 
 | | Accuracy| F1 | Precision | Recall |
 |----------|----------|----------|----------| ----------|
