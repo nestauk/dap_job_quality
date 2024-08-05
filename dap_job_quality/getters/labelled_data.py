@@ -1,3 +1,5 @@
+import pandas as pd
+
 from dap_job_quality.getters.data_getters import load_s3_jsonl
 
 from dap_job_quality import BUCKET_NAME, PROJECT_DIR
@@ -26,4 +28,48 @@ def get_labelled_job_sentences():
         s3_file_name="job_quality/prodigy/labelled_data/job_sentences_labelled_20240528.jsonl",
         local_file=PROJECT_DIR
         / f"inputs/labelled/job_sentences_labelled_20240528.jsonl",
+    )
+
+
+def get_older_labelled_data():
+    """The first batch of labelling that we did"""
+    return load_s3_jsonl(
+        BUCKET_NAME,
+        s3_file_name="job_quality/prodigy/binary_classifier_labelled_data/20240416/job_sentences_labelled_20240416.jsonl",
+        local_file=PROJECT_DIR
+        / f"inputs/labelled/job_sentences_labelled_20240416.jsonl",
+    )[
+        0
+    ]  # it's a nested list for some reason
+
+
+def get_positive_sents_labelled_for_categories():
+    """
+    Originally produced by `dap_job_quality/pipeline/sentence_classifier/training_data/01_concat_data.py`
+
+    Labelled [here](https://docs.google.com/spreadsheets/d/1bXNmO9vOLG6zdDpHl0Tdw9AeDqb43CrpkXzNGyHRhWI/edit?gid=4769099#gid=4769099)
+    """
+    return pd.read_csv(
+        "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/positive_sents_for_labelling - positive_sents_for_labelling.csv"
+    )
+
+
+def get_additional_examples_underrepresented_categories():
+    """Produced by `dap_job_quality/notebooks/pad_out_sample.ipynb` and then manually labelled
+    [here](https://docs.google.com/spreadsheets/d/1s4SRbQypfUP0sY88y-NlaOJegHYv21whcBAVudS9Paw/edit?gid=1942213912#gid=1942213912)
+    """
+    return pd.read_csv(
+        "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/additional_green_jobs_examples_20240704_labelled.csv"
+    )
+
+
+def get_search_terms_for_small_categories():
+    """
+    We identified what proportion of the labelled data was made up by which categories. We then labelled
+    the underrepresented categories with some search terms that we could use to pad out data for these categories.
+
+    See this Google Sheet: https://docs.google.com/spreadsheets/d/1DuD3f2V4Ffm-JyibpFaZ_tFlh7U5SlwJFi6rJxRaJ_w/edit?gid=206573346#gid=206573346
+    """
+    return pd.read_csv(
+        "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/category_representation - category_representation.csv"
     )

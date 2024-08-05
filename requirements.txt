@@ -1,4 +1,9 @@
+altair==5.3.0
+altair-data-server==0.4.1
+altair-saver==0.5.0
+altair-viewer==0.4.0
 boto3
+datasets
 fsspec
 langchain_openai
 matplotlib
@@ -15,8 +20,9 @@ sentence-transformers
 spacy
 srsly
 toolz
+torch==2.1.2
+tqdm==4.66.1
+umap-learn
 wandb==0.16.6
 wordcloud
 xlrd
-torch==2.1.2
-tqdm==4.66.1
