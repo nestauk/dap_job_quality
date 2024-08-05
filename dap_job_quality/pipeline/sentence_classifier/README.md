@@ -26,7 +26,15 @@ We ran hyperparameter sweeps for the following types of model:
 - `distilbert_sweep.py`: this sweep fine-tunes a distilbert model for 1 epoch.
 - `jobbert_sweep.py`: this sweep fine-tunes a jobbert model for 1 epoch.
 
-The performance of the best run (highest F1) from each of these hyperparameter sweeps is displayed in the table below. Training a logistic regression on embeddings that had been obtained from jobbert obtained excellent results (XXX). However, it was decided not to proceed with this route because of the relatively high processing time it takes to perform inference using this approach, as compared to fine-tuning a transformer and using HuggingFace's inbuilt functions for performing inference.
+The performance of the best run (highest F1) from each of these hyperparameter sweeps is displayed in the table below.
+
+| | Accuracy| F1 | Precision | Recall |
+|----------|----------|----------|----------| ----------|
+| Logistic regression | | | | |
+| Distilbert | | | | |
+| Jobbert | | | | |
+
+Training a logistic regression on embeddings that had been obtained from jobbert obtained excellent results (XXX). However, it was decided not to proceed with this route because of the relatively high processing time it takes to perform inference using this approach, as compared to fine-tuning a transformer and using HuggingFace's inbuilt functions for performing inference.
 
 The best performance in terms of F1 was obtained from fine-tuning jobbert, and so the script `jobbert_train.py` fine-tunes jobbert with the best hyperparameters found in the sweep.
 
