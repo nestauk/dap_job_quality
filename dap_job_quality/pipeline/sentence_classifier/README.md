@@ -30,7 +30,7 @@ The performance of the best run (highest F1) from each of these hyperparameter s
 
 | | Accuracy| F1 | Precision | Recall |
 |----------|----------|----------|----------| ----------|
-| Logistic regression | | | | |
+| Logistic regression | 0.89 | 0.89 | 0.93 | 0.86 |
 | Distilbert | | | | |
 | Jobbert | | | | |
 
