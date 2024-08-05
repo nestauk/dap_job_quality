@@ -31,7 +31,7 @@ The performance of the best run (highest F1, evaluated on the validation set) fr
 | | Accuracy| F1 | Precision | Recall |
 |----------|----------|----------|----------| ----------|
 | Logistic regression | 0.89 | 0.89 | 0.93 | 0.86 |
-| Distilbert | | | | |
+| Distilbert | 0.91 | 0.91 | 0.92 | 0.90 |
 | Jobbert | | | | |
 
 Training a logistic regression on embeddings that had been obtained from jobbert obtained excellent results (XXX). However, it was decided not to proceed with this route because of the relatively high processing time it takes to perform inference using this approach, as compared to fine-tuning a transformer and using HuggingFace's inbuilt functions for performing inference.
