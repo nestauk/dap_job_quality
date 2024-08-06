@@ -38,19 +38,23 @@ import re
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import torch
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
 from typing import List, Union, Tuple
 import time
 
-from dap_job_quality import logging, BUCKET_NAME
+from dap_job_quality import logging, BUCKET_NAME, PROJECT_DIR
 from dap_job_quality.getters.afs_data import get_stratified_sample
 from dap_job_quality.getters.data_getters import save_to_s3
+from dap_job_quality.getters.ojo_getters import get_ojo_sample
+from dap_job_quality.getters.jobbert_jq import get_jobbert_jq
 from dap_job_quality.getters.models import (
     sentence_classifier_pca,
     sentence_classifier_lr,
 )
 from dap_job_quality.getters.keywords import get_keywords
 from dap_job_quality.utils.text_cleaning import clean_text
+from dap_job_quality.getters.data_getters import download_and_extract_from_s3
 
 
 def split_ngrams(
@@ -181,10 +185,15 @@ class JobQuality(object):
         )
         self.ngram_match_bert_transformer.max_seq_length = self.MAX_LENGTH
 
-        # Logistic regression model to predict whether the sentence is about job quality.
-        self.sentence_classifier_model = sentence_classifier_lr()
-        # pca for dimensionality reduction.
-        self.sentence_classifier_pca = sentence_classifier_pca()
+        sentence_classifier_model, sentence_classifier_tokenizer = get_jobbert_jq()
+
+        self.job_quality_classifier = pipeline(
+            "text-classification",
+            model=sentence_classifier_model,
+            tokenizer=sentence_classifier_tokenizer,
+            return_all_scores=False,
+            device=0 if torch.cuda.is_available() else -1,  # Use GPU if available
+        )
 
         # DataFrame containing the target phrases to match against.
         self.LOOKUP = get_keywords()
@@ -243,25 +252,30 @@ class JobQuality(object):
         jobs_df["sentences"] = jobs_df[text_col].apply(lambda x: sent_tokenize(x))
         jobs_df = jobs_df.explode("sentences")
 
-        logging.info(f"Calculating embeddings for {len(jobs_df)} sentences ...")
-        start_time = time.time()
-        ad_embeddings = self.sentence_classifier_bert_transformer.encode(
-            jobs_df["sentences"].tolist(), batch_size=self.batch_size
+        logging.info(
+            f"Predicting job quality sentences for {len(jobs_df)} sentences ..."
         )
-        elapsed_time = time.time() - start_time
-        print(f"Time taken: {elapsed_time:.2f} seconds")
-
-        X_new_pca = self.sentence_classifier_pca.transform(ad_embeddings)
-
-        logging.info(f"Predicting job quality sentences ...")
         start_time = time.time()
-        predictions = self.sentence_classifier_model.predict_proba(X_new_pca)[:, 1]
+        predictions = self.job_quality_classifier(jobs_df["sentences"].tolist())
+
         elapsed_time = time.time() - start_time
         print(f"Time taken: {elapsed_time:.2f} seconds")
 
-        jobs_df["job_quality_prob"] = predictions
+        labels = []
+        pred_scores = []
+        for pred in predictions:
+            labels.append(pred["label"])
+            pred_scores.append(pred["score"])
 
-        job_quality_df = jobs_df[jobs_df["job_quality_prob"] >= self.JQ_THRESHOLD]
+        jobs_df["job_quality_label"] = labels
+        jobs_df["job_quality_prob"] = pred_scores
+
+        job_quality_df = jobs_df[
+            (
+                (jobs_df["job_quality_label"] == "LABEL_1")
+                & (jobs_df["job_quality_prob"] >= self.JQ_THRESHOLD)
+            )
+        ]
 
         return job_quality_df.reset_index(drop=True)
 
@@ -389,6 +403,8 @@ class JobQuality(object):
 
         """
 
+        # TO DO. If len(job_adverts)>1000 do this in a loop? (may be too much to process 100k at a time)
+
         self.job_quality_df = self.extract_job_quality_sentences(
             job_adverts,
             id_col=id_col,
@@ -429,6 +445,13 @@ if __name__ == "__main__":
         help="Run the script in production mode or test",
     )
 
+    parser.add_argument(
+        "--job_ads_type",
+        default="afs",
+        type=str,
+        help="Which dataset to predict job quality measures from, can be 'afs', 'random', or 'evaluation'",
+    )
+
     args = parser.parse_args()
     logging.info(args)
 
@@ -436,10 +459,21 @@ if __name__ == "__main__":
 
     # Import the job adverts
 
-    if args.production:
+    if args.job_ads_type == "afs":
         job_adverts = get_stratified_sample()
-    else:
-        job_adverts = get_stratified_sample().sample(10, random_state=42)
+        id_col = "id"
+        text_col = "clean_description"
+    elif args.job_ads_type == "random":
+        job_adverts = get_ojo_sample()
+        id_col = "id"
+        text_col = "description"
+    # elif args.job_ads_type == 'evaluation':
+    #     job_adverts = # FILL IN
+    # else:
+    #     # LOG warning message
+
+    if not args.production:
+        job_adverts = job_adverts.sample(10, random_state=42)
 
     logging.info(f"Sample size: {len(job_adverts)}")
 
@@ -448,9 +482,15 @@ if __name__ == "__main__":
 
     jq_df_filtered, job_id_to_target_phrase = job_quality.extract_job_quality(
         job_adverts,
-        "id",
-        "clean_description",
+        id_col,
+        text_col,
     )
 
-    filename = f"job_quality/early_years/evaluation_sample/job_ads_prod_{args.production}_sample_{len(job_adverts)}_{today}.parquet"
-    save_to_s3(BUCKET_NAME, jq_df_filtered, filename)
+    filename = f"job_quality/outputs/{args.job_ads_type}/job_ads_prod_{args.production}_n_{len(job_adverts)}_{today}.parquet"
+    save_to_s3(
+        BUCKET_NAME,
+        jq_df_filtered[
+            ["id", "sentences_split", "ngrams", "target_phrase", "cosine_similarity"]
+        ],
+        filename,
+    )
