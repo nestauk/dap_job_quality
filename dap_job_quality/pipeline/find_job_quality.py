@@ -37,24 +37,32 @@ import pandas as pd
 import re
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+import time
 import torch
+from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-
 from typing import List, Union, Tuple
 import time
 
-from dap_job_quality import logging, BUCKET_NAME, PROJECT_DIR
+from dap_job_quality import logging, BUCKET_NAME, PROJECT_DIR, get_yaml_config
 from dap_job_quality.getters.afs_data import get_stratified_sample
-from dap_job_quality.getters.data_getters import save_to_s3
+from dap_job_quality.getters.data_getters import (
+    save_to_s3,
+    get_s3_data_paths,
+    load_s3_data,
+)
 from dap_job_quality.getters.ojo_getters import get_ojo_sample
 from dap_job_quality.getters.jobbert_jq import get_jobbert_jq
-from dap_job_quality.getters.models import (
-    sentence_classifier_pca,
-    sentence_classifier_lr,
-)
 from dap_job_quality.getters.keywords import get_keywords
 from dap_job_quality.utils.text_cleaning import clean_text
-from dap_job_quality.getters.data_getters import download_and_extract_from_s3
+
+# from dap_job_quality.getters.data_getters import download_and_extract_from_s3
+
+jobbert_config = get_yaml_config(
+    PROJECT_DIR / "dap_job_quality/config/jobbert_config.yaml"
+)
+
+TODAY = datetime.today().strftime("%Y-%m-%d")
 
 
 def split_ngrams(
@@ -141,21 +149,53 @@ def split_text(text: str) -> List[str]:
     return final_splits
 
 
+def split_into_chunks(
+    sentence: str, chunk_size: int = 25, overlap: int = 5
+) -> List[str]:
+    """
+    Splits a sentence into overlapping chunks of a specified size.
+
+    This is useful because although we've tried to split up job adverts into reasonable sentences by various means
+    eg converting bullet points to full stops, splitting on certain delimiters, etc, there are still some very long sentences.
+    Having an overlap of 5 words means that if there is a phrase that you'd want to capture whole eg "learning and development",
+    we should still get that.
+
+    A chunk size of 25 is recommended because EDA of a random sample of 10,000 job ads showed that the upper quartile for
+    number of words in a sentence was 23 (we round up to 25).
+
+    Args:
+        sentence (str): The sentence to be split into chunks.
+        chunk_size (int): The size of each chunk. Default is 25.
+        overlap (int): The number of overlapping words between chunks. Default is 5.
+
+    Returns:
+        List[str]: A list of sentence chunks.
+    """
+    words = sentence.split()
+    chunks = []
+    i = 0
+    while i < len(words):
+        chunk = words[i : i + chunk_size]
+        chunks.append(" ".join(chunk))
+        i += chunk_size - overlap
+    return chunks
+
+
 class JobQuality(object):
     """Find aspects of job quality from job adverts
     Args:
         JQ_THRESHOLD (float, optional): Threshold to use for predicting 1 from the logistic regression sentence quality classifier.
         CS_THRESHOLD (float, optional): The cosine similarity threshold for determining a match.
         batch_size (int, optional):
-        MAX_LENGTH (int, optional): This is the 99th percentile of N tokens in job advert sentences :)
+        MAX_LENGTH (int, optional): Maximum token length for fine-tuned jobbert model.
     """
 
     def __init__(
         self,
-        JQ_THRESHOLD: float = 0.3,
-        CS_THRESHOLD: float = 0.55,
-        batch_size: int = 64,
-        MAX_LENGTH: int = 81,
+        JQ_THRESHOLD: float = jobbert_config["jq_threshold"],
+        CS_THRESHOLD: float = jobbert_config["cs_threshold"],
+        batch_size: int = jobbert_config["train_config"]["per_device_train_batch_size"],
+        MAX_LENGTH: int = jobbert_config["max_length"],
     ):
         self.JQ_THRESHOLD = JQ_THRESHOLD
         self.CS_THRESHOLD = CS_THRESHOLD
@@ -175,17 +215,20 @@ class JobQuality(object):
         nltk.download("stopwords")
 
         # The sentence embedding model to use for encoding the sentences for the sentence classifier.
-        self.sentence_classifier_bert_transformer = SentenceTransformer(
-            "jjzha/jobbert-base-cased", device=self.device
-        )
+        #  not used
+        # self.sentence_classifier_bert_transformer = SentenceTransformer(
+        #     "jjzha/jobbert-base-cased", device=self.device
+        # )
 
         # The sentence embedding model to use for encoding the n-grams and target phrases.
         self.ngram_match_bert_transformer = SentenceTransformer(
             "all-MiniLM-L6-v2", device=self.device
         )
-        self.ngram_match_bert_transformer.max_seq_length = self.MAX_LENGTH
+        # self.ngram_match_bert_transformer.max_seq_length = self.MAX_LENGTH #I don't think this part needs truncation
 
-        sentence_classifier_model, sentence_classifier_tokenizer = get_jobbert_jq()
+        sentence_classifier_model, sentence_classifier_tokenizer = get_jobbert_jq(
+            max_length=self.MAX_LENGTH
+        )
 
         self.job_quality_classifier = pipeline(
             "text-classification",
@@ -251,6 +294,14 @@ class JobQuality(object):
 
         jobs_df["sentences"] = jobs_df[text_col].apply(lambda x: sent_tokenize(x))
         jobs_df = jobs_df.explode("sentences")
+
+        # Make sure there are no super super long sentences
+        jobs_df["chunks"] = jobs_df["sentences"].apply(
+            lambda x: split_into_chunks(x) if len(x.split()) >= 25 else [x]
+        )
+        jobs_df = jobs_df.explode("chunks").reset_index(drop=True)
+        jobs_df = jobs_df.drop(columns=["sentences"])
+        jobs_df = jobs_df.rename(columns={"chunks": "sentences"})
 
         logging.info(
             f"Predicting job quality sentences for {len(jobs_df)} sentences ..."
@@ -446,6 +497,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--sample_size",
+        default=10,
+        type=int,
+        help="Number of job adverts to test on (only used if production=False)",
+    )
+
+    parser.add_argument(
         "--job_ads_type",
         default="afs",
         type=str,
@@ -455,7 +513,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logging.info(args)
 
-    today = datetime.today().strftime("%Y-%m-%d")
+    if not args.production:
+        chunk_size = 20
+    else:
+        chunk_size = 10000
 
     # Import the job adverts
 
@@ -472,25 +533,68 @@ if __name__ == "__main__":
     # else:
     #     # LOG warning message
 
-    if not args.production:
-        job_adverts = job_adverts.sample(10, random_state=42)
+    if not args.production & (len(job_adverts) > args.sample_size):
+        job_adverts = job_adverts.sample(args.sample_size, random_state=42)
 
     logging.info(f"Sample size: {len(job_adverts)}")
+
+    start_time = time.time()
+    start_time_formatted = datetime.fromtimestamp(start_time).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+    logging.info(f"Processing started at {start_time_formatted}")
 
     job_quality = JobQuality()
     job_quality.load()
 
-    jq_df_filtered, job_id_to_target_phrase = job_quality.extract_job_quality(
-        job_adverts,
-        id_col,
-        text_col,
+    job_ad_chunks = [
+        job_adverts.iloc[i : i + chunk_size]
+        for i in range(0, len(job_adverts), chunk_size)
+    ]
+
+    interim_folder = f"job_quality/outputs/{args.job_ads_type}/interim/production_{args.production}_n_{len(job_adverts)}_{TODAY}"
+
+    for i, job_chunk in tqdm(enumerate(job_ad_chunks)):
+        logging.info(f"Processing chunk {i}...")
+
+        jq_df_filtered, _ = job_quality.extract_job_quality(
+            job_chunk,
+            id_col,
+            text_col,
+        )
+
+        filename = f"{interim_folder}/job_ads_chunk_{i}.parquet"
+        save_to_s3(
+            BUCKET_NAME,
+            jq_df_filtered[
+                [
+                    "id",
+                    "sentences_split",
+                    "ngrams",
+                    "target_phrase",
+                    "cosine_similarity",
+                ]
+            ],
+            filename,
+        )
+
+    end_time = time.time()
+    logging.info(
+        f"Time taken to process {len(job_adverts)} texts: {end_time - start_time} seconds"
     )
 
-    filename = f"job_quality/outputs/{args.job_ads_type}/job_ads_prod_{args.production}_n_{len(job_adverts)}_{today}.parquet"
+    logging.info("Saving data...")
+    files = get_s3_data_paths(BUCKET_NAME, interim_folder, "*.parquet")
+    print(files)
+    data = pd.DataFrame()
+    for file in files:
+        output_data = pd.concat([output_data, load_s3_data(BUCKET_NAME, file)])
+
+    final_filename = f"job_quality/outputs/{args.job_ads_type}/job_ads_prod_{args.production}_n_{len(job_adverts)}_{TODAY}.parquet"
     save_to_s3(
         BUCKET_NAME,
-        jq_df_filtered[
+        output_data[
             ["id", "sentences_split", "ngrams", "target_phrase", "cosine_similarity"]
         ],
-        filename,
+        final_filename,
     )
