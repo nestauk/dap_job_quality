@@ -1,24 +1,12 @@
 import argparse
 from datetime import datetime
-import matplotlib
 
-matplotlib.use(
-    "Agg"
-)  # Use a non-interactive backend for matplotlib so that it (hopefully) works on EC2
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+import os
 import random
 from scipy.special import softmax
-from sklearn.metrics import (
-    classification_report,
-    confusion_matrix,
-    ConfusionMatrixDisplay,
-    accuracy_score,
-    f1_score,
-    recall_score,
-    precision_recall_fscore_support,
-)
+import shutil
+from sklearn.metrics import confusion_matrix
 import wandb
 
 
@@ -31,32 +19,27 @@ from transformers import (
     Trainer,
     EarlyStoppingCallback,
 )
-from datasets import load_dataset, load_metric, Dataset
+from datasets import Dataset
 
-from dap_job_quality import BUCKET_NAME, logging, PROJECT_DIR, get_yaml_config
-from dap_job_quality.getters.data_getters import load_s3_data
-from dap_job_quality.utils import jobbert
+from dap_job_quality import logging, PROJECT_DIR, get_yaml_config
 from dap_job_quality.pipeline.sentence_classifier.classifier_utils import (
     load_datasets_for_hf,
     log_confusion_matrix_img,
     tokenize_function,
     log_confusion_matrix_table,
     log_summary_metrics,
-    get_best_hyperparams,
-    load_training_args,
     saving_huggingface_model,
     compute_metrics,
-    # saving_huggingface_tokenizer,
+)
+
+jobbert_config = get_yaml_config(
+    PROJECT_DIR / "dap_job_quality/config/jobbert_config.yaml"
 )
 
 TODAY = datetime.today().strftime("%Y-%m-%d")
-SEED = 42
+SEED = jobbert_config["seed"]
 random.seed(SEED)
 np.random.seed(SEED)
-
-jobbert_config = get_yaml_config(
-    PROJECT_DIR / "dap_job_quality/pipeline/sentence_classifier/jobbert_config.yaml"
-)
 
 CONF_MAT_OUTPATH = PROJECT_DIR / "outputs/figures/"
 INPUT_MODEL_NAME = "jjzha/jobbert-base-cased"
@@ -66,6 +49,13 @@ LOCAL_SAVE_PATH = (
     PROJECT_DIR / f"outputs/models/sentence_classifier/{OUTPUT_MODEL_NAME}"
 )
 S3_SAVE_PATH = "job_quality/sentence_classifier/outputs/"
+CHECKPOINT_DIR = PROJECT_DIR / "outputs/models/sentence_classifier/checkpoints/"
+
+MAX_LENGTH = jobbert_config["max_length"]
+
+if os.path.exists(CHECKPOINT_DIR):
+    shutil.rmtree(CHECKPOINT_DIR)
+os.makedirs(CHECKPOINT_DIR)
 
 model = AutoModelForSequenceClassification.from_pretrained(
     INPUT_MODEL_NAME, num_labels=2
@@ -108,19 +98,19 @@ if __name__ == "__main__":
     tokenized_train_dataset = train_dataset.map(
         tokenize_function,
         batched=True,
-        fn_kwargs={"tokenizer": tokenizer, "max_length": 128},
+        fn_kwargs={"tokenizer": tokenizer, "max_length": MAX_LENGTH},
     )
     tokenized_val_dataset = val_dataset.map(
         tokenize_function,
         batched=True,
-        fn_kwargs={"tokenizer": tokenizer, "max_length": 128},
+        fn_kwargs={"tokenizer": tokenizer, "max_length": MAX_LENGTH},
     )
 
     # data collator
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     training_args = TrainingArguments(
-        output_dir=PROJECT_DIR / "outputs/models/",
+        output_dir=CHECKPOINT_DIR,
         learning_rate=jobbert_config["train_config"]["learning_rate"],
         per_device_train_batch_size=jobbert_config["train_config"][
             "per_device_train_batch_size"
@@ -128,16 +118,13 @@ if __name__ == "__main__":
         per_device_eval_batch_size=jobbert_config["train_config"][
             "per_device_eval_batch_size"
         ],
-        gradient_accumulation_steps=jobbert_config["train_config"][
-            "gradient_accumulation_steps"
-        ],
         weight_decay=jobbert_config["train_config"]["weight_decay"],
         num_train_epochs=jobbert_config["train_config"]["num_train_epochs"],
         evaluation_strategy=jobbert_config["train_config"]["evaluation_strategy"],
         save_strategy=jobbert_config["train_config"]["save_strategy"],
         metric_for_best_model=jobbert_config["train_config"]["metric_for_best_model"],
         load_best_model_at_end=jobbert_config["train_config"]["load_best_model_at_end"],
-        seed=jobbert_config["train_config"]["seed"],
+        seed=jobbert_config["seed"],
         report_to="wandb",
     )
 
