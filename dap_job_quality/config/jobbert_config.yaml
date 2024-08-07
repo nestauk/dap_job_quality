@@ -1,5 +1,8 @@
-model: distilbert-base-uncased
-max_length: 81
+model: jjzha/jobbert-base-cased
+max_length: 128
+seed: 42
+jq_threshold: 0.3
+cs_threshold: 0.55
 
 sweep_config:
   method: random
@@ -15,3 +18,15 @@ sweep_config:
       values: [8, 16, 32, 64]
     weight_decay:
       values: [0.1, 0.01, 0.001]
+
+train_config:
+  learning_rate: 0.000002
+  per_device_train_batch_size: 32
+  per_device_eval_batch_size: 32
+  weight_decay: 0.1
+  num_train_epochs: 10
+  evaluation_strategy: "epoch"
+  save_strategy: "epoch"
+  metric_for_best_model: "f1"
+  load_best_model_at_end: True
+  early_stopping_patience: 2
