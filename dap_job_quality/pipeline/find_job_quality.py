@@ -586,7 +586,7 @@ if __name__ == "__main__":
     logging.info("Saving data...")
     files = get_s3_data_paths(BUCKET_NAME, interim_folder, "*.parquet")
     print(files)
-    data = pd.DataFrame()
+    output_data = pd.DataFrame()
     for file in files:
         output_data = pd.concat([output_data, load_s3_data(BUCKET_NAME, file)])
 
