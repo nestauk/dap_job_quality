@@ -516,7 +516,7 @@ if __name__ == "__main__":
     if not args.production:
         chunk_size = 20
     else:
-        chunk_size = 10000
+        chunk_size = 1000
 
     # Import the job adverts
 
