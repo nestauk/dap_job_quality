@@ -5,7 +5,7 @@ from dap_job_quality import BUCKET_NAME, PROJECT_DIR
 from dap_job_quality.getters.data_getters import download_and_extract_from_s3
 
 MODEL_DIR_LOCAL = PROJECT_DIR / "outputs/models/"
-MODEL_NAME = "jobbert-base-cased-jq-2024-08-05"
+MODEL_NAME = "jobbert-base-cased-jq-2024-08-06"
 
 
 def get_jobbert_jq(model_dir=MODEL_DIR_LOCAL, bucket_name=BUCKET_NAME):
