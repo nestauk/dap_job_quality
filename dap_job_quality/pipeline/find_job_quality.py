@@ -28,6 +28,7 @@ job_id_to_target_phrase = {123: ['Cycle to work', 'benefits', 'pension', 'pensio
 """
 
 import argparse
+from datasets import Dataset
 from datetime import datetime
 import nltk
 from nltk import ngrams
@@ -303,11 +304,15 @@ class JobQuality(object):
         jobs_df = jobs_df.drop(columns=["sentences"])
         jobs_df = jobs_df.rename(columns={"chunks": "sentences"})
 
+        dataset = Dataset.from_pandas(jobs_df)
+
         logging.info(
             f"Predicting job quality sentences for {len(jobs_df)} sentences ..."
         )
         start_time = time.time()
-        predictions = self.job_quality_classifier(jobs_df["sentences"].tolist())
+        predictions = self.job_quality_classifier(
+            dataset["sentences"], batch_size=self.batch_size
+        )
 
         elapsed_time = time.time() - start_time
         print(f"Time taken: {elapsed_time:.2f} seconds")
