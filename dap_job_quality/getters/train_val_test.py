@@ -29,7 +29,8 @@ def get_ids(set: str = "train") -> pd.DataFrame:
 
     Returns:
         pd.DataFrame: Dataframe with the columns 'id' and 'majority_label'.
-        'majority_label' is the label that most sentences in that advert have.
+        'majority_label' is the label that most sentences in that advert have ie 1= the majority
+        of sentences are about job quality; 0 = the majority of sentences are not about job quality.
     """
     ids = load_s3_data(
         BUCKET_NAME,
