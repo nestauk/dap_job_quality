@@ -30,6 +30,7 @@ from dap_job_quality.getters.data_getters import (
     upload_file_to_s3,
     save_to_s3,
 )
+from dap_job_quality.getters.train_val_test import get_df
 
 
 def log_confusion_matrix_img(cm, outpath, filename):
@@ -51,14 +52,8 @@ def log_confusion_matrix_table(cm):
 
 
 def load_datasets_for_hf():
-    train_df = load_s3_data(
-        BUCKET_NAME,
-        "job_quality/sentence_classifier/inputs/labelled/train_df_20240725.parquet",
-    )
-    val_df = load_s3_data(
-        BUCKET_NAME,
-        "job_quality/sentence_classifier/inputs/labelled/val_df_20240725.parquet",
-    )
+    train_df = get_df("train")
+    val_df = get_df("val")
 
     train_df.rename(columns={"label": "labels"}, inplace=True)
     val_df.rename(columns={"label": "labels"}, inplace=True)

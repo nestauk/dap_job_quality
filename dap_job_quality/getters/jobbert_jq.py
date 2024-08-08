@@ -5,10 +5,10 @@ from dap_job_quality import BUCKET_NAME, PROJECT_DIR
 from dap_job_quality.getters.data_getters import download_and_extract_from_s3
 
 MODEL_DIR_LOCAL = PROJECT_DIR / "outputs/models/"
-MODEL_NAME = "jobbert-base-cased-jq-2024-08-05"
+MODEL_NAME = "jobbert-base-cased-jq-2024-08-06"
 
 
-def get_jobbert_jq(model_dir=MODEL_DIR_LOCAL, bucket_name=BUCKET_NAME):
+def get_jobbert_jq(model_dir=MODEL_DIR_LOCAL, bucket_name=BUCKET_NAME, max_length=128):
     logging.info("Downloading the model...")
     download_and_extract_from_s3(
         f"job_quality/sentence_classifier/outputs/{MODEL_NAME}.tar.gz",
@@ -20,6 +20,11 @@ def get_jobbert_jq(model_dir=MODEL_DIR_LOCAL, bucket_name=BUCKET_NAME):
     model = AutoModelForSequenceClassification.from_pretrained(
         model_dir / MODEL_NAME, num_labels=2
     )
-    tokenizer = AutoTokenizer.from_pretrained(model_dir / MODEL_NAME)
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_dir / MODEL_NAME,
+        padding="max_length",
+        truncation=True,
+        max_length=max_length,
+    )
 
     return model, tokenizer
