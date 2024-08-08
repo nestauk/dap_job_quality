@@ -12,6 +12,7 @@ def get_df(set: str = "train") -> pd.DataFrame:
 
     Returns:
         pd.DataFrame: DataFrame with the columns 'id', 'sentence', 'label'.
+        'label' is binary: 0 if the sentence is not related to job quality, 1 if it is.
     """
     df = load_s3_data(
         BUCKET_NAME,
