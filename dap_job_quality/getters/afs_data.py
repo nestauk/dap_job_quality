@@ -76,5 +76,5 @@ def get_jq_sentences_and_matches() -> pd.DataFrame:
 def get_stratified_sample() -> pd.DataFrame:
     return load_s3_data(
         BUCKET_NAME,
-        "job_quality/early_years/evaluation_sample/job_ads_sample_10000.parquet",
+        "job_quality/early_years/evaluation_sample/job_ads_sample_size_16392.parquet",
     )

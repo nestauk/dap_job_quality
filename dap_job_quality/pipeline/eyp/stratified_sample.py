@@ -1,37 +1,39 @@
-import argparse
+# import argparse
 import pandas as pd
-from sklearn.model_selection import StratifiedShuffleSplit
 
 from dap_job_quality import PROJECT_DIR, BUCKET_NAME, logging
 from dap_job_quality.getters.afs_data import get_sim_occ_ads, get_eyp_ads
 from dap_job_quality.getters.data_getters import save_to_s3
 
+SEED = 42
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Script to run with command line arguments."
-    )
+    # parser = argparse.ArgumentParser(
+    #     description="Script to run with command line arguments."
+    # )
 
-    parser.add_argument(
-        "--sample_size",
-        default=500,
-        type=int,
-        help="How many job ads do you want in your sample?",
-    )
+    # parser.add_argument(
+    #     "--sample_size",
+    #     default=500,
+    #     type=int,
+    #     help="How many job ads do you want in your sample?",
+    # )
 
-    args = parser.parse_args()
-    logging.info(args)
+    # args = parser.parse_args()
+    # logging.info(args)
 
     eyp = get_eyp_ads()
     sim_occs = get_sim_occ_ads()
     all_job_ads = pd.concat([eyp, sim_occs], axis=0).drop_duplicates()
 
+    all_job_ads = all_job_ads[
+        all_job_ads["itl_1_name"] != "Northern Ireland"
+    ]  # NI has fewer than 100
+
     all_job_ads["year"] = pd.to_datetime(all_job_ads["created"]).dt.year
+    # Ideally we would stratify by ITL 1 as well but the minimum sample size ends up too small
     all_job_ads["stratify_col"] = (
-        all_job_ads["year"].astype(str)
-        + "_"
-        + all_job_ads["sector"]
-        + "_"
-        + all_job_ads["itl_1_code"]
+        all_job_ads["year"].astype(str) + "_" + all_job_ads["sector"]
     )
 
     all_job_ads = all_job_ads[all_job_ads["itl_1_code"].notnull()]
@@ -43,28 +45,20 @@ if __name__ == "__main__":
     to_keep = value_counts[value_counts > 2].index
     all_job_ads = all_job_ads[all_job_ads["stratify_col"].isin(to_keep)]
 
-    if (args.sample_size - len(all_job_ads["stratify_col"].unique())) < 0:
-        raise ValueError(
-            "The sample is not big enough to accommodate the stratification. Choose a larger sample size."
-        )
+    grouped = all_job_ads.groupby("stratify_col")
+    sample_size = min(grouped.size())  # Minimum group size to ensure equal samples
+    logging.info(f"Minimum sample size: {sample_size}")
 
-    # Define the stratified splitter
-    splitter = StratifiedShuffleSplit(
-        n_splits=1, test_size=args.sample_size, random_state=42
-    )
+    sampled_df = grouped.apply(
+        lambda x: x.sample(sample_size, random_state=SEED)
+    ).reset_index(drop=True)
 
-    # Perform the stratified sampling
-    for train_index, test_index in splitter.split(
-        all_job_ads, all_job_ads["stratify_col"]
-    ):
-        stratified_sample = all_job_ads.iloc[test_index]
-
-    stratified_sample.drop(columns=["stratify_col"], inplace=True)
-    sample_n_rows = len(stratified_sample)
+    sampled_df.drop(columns=["stratify_col"], inplace=True)
+    sample_n_rows = len(sampled_df)
     logging.info(f"Size of sample: {sample_n_rows}")
 
     save_to_s3(
         BUCKET_NAME,
-        stratified_sample,
+        sampled_df,
         f"job_quality/early_years/evaluation_sample/job_ads_sample_size_{sample_n_rows}.parquet",
     )
