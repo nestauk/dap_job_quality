@@ -63,7 +63,7 @@ jobbert_config = get_yaml_config(
     PROJECT_DIR / "dap_job_quality/config/jobbert_config.yaml"
 )
 
-TODAY = datetime.today().strftime("%Y-%m-%d")
+TODAY = "2024-08-07"  # datetime.today().strftime("%Y-%m-%d")
 
 
 def split_ngrams(
@@ -559,7 +559,7 @@ if __name__ == "__main__":
 
     interim_folder = f"job_quality/outputs/{args.job_ads_type}/interim/production_{args.production}_n_{len(job_adverts)}_{TODAY}"
 
-    for i, job_chunk in tqdm(enumerate(job_ad_chunks)):
+    for i, job_chunk in tqdm(enumerate(job_ad_chunks))[83:]:
         logging.info(f"Processing chunk {i}...")
 
         jq_df_filtered, _ = job_quality.extract_job_quality(
