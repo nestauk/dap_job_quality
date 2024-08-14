@@ -83,6 +83,8 @@ if __name__ == "__main__":
         logging.warning(
             f"Data size mismatch. Should be {master_data_size} but is actually {len(master_df)}"
         )
+    else:
+        logging.info(f"Final data comprises {len(master_df)} job ads")
 
     save_to_s3(
         BUCKET_NAME,
