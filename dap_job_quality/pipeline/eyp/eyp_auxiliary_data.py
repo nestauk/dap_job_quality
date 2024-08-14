@@ -60,10 +60,10 @@ if __name__ == "__main__":
     if not args.production:
         s3_keys = s3_keys[1400:1450]
 
-    master_df = pd.DataFrame()
-
+    master_data_size = 0
     for i, key in tqdm(enumerate(s3_keys[args.start_index :])):
         temp_df = process_data(key, afs_ids)
+        master_data_size += len(temp_df)
 
         save_to_s3(
             BUCKET_NAME,
@@ -71,7 +71,18 @@ if __name__ == "__main__":
             f"job_quality/early_years/evaluation_sample/metadata_interim_production_{args.production}/job_ads_sample_size_16392_metadata_chunk_{i+args.start_index}.parquet",
         )
 
-        master_df = pd.concat([master_df, temp_df])
+    paths = get_s3_data_paths(
+        BUCKET_NAME,
+        root=f"job_quality/early_years/evaluation_sample/metadata_interim_production_{args.production}",
+        file_types=["*.parquet"],
+    )
+    paths = ["s3://" + BUCKET_NAME + "/" + path for path in paths]
+    master_df = pd.concat(pd.read_parquet(f) for f in paths)
+
+    if master_data_size != len(master_df):
+        logging.warning(
+            f"Data size mismatch. Should be {master_data_size} but is actually {len(master_df)}"
+        )
 
     save_to_s3(
         BUCKET_NAME,
