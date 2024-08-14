@@ -1,7 +1,8 @@
+import argparse
 import pandas as pd
-import re
+from tqdm import tqdm
 
-from dap_job_quality import BUCKET_NAME
+from dap_job_quality import BUCKET_NAME, logging
 from dap_job_quality.getters.data_getters import (
     save_to_s3,
     load_s3_json,
@@ -24,6 +25,27 @@ def process_data(s3_key, afs_ids):
 
 if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(
+        description="Script to run with command line arguments."
+    )
+
+    parser.add_argument(
+        "--production",
+        default=False,
+        type=bool,
+        help="Run the script in production mode or test",
+    )
+
+    parser.add_argument(
+        "--start_index",
+        default=0,
+        type=int,
+        help="Run the script in production mode or test",
+    )
+
+    args = parser.parse_args()
+    logging.info(args)
+
     afs_raw_sample = pd.read_parquet(
         "s3://open-jobs-lake/job_quality/early_years/evaluation_sample/job_ads_sample_size_16392.parquet"
     )
@@ -35,19 +57,18 @@ if __name__ == "__main__":
         file_types=["*.json"],
     )
 
+    if not args.production:
+        s3_keys = s3_keys[1400:1450]
+
     master_df = pd.DataFrame()
 
-    for key in s3_keys:
+    for i, key in tqdm(enumerate(s3_keys[args.start_index :])):
         temp_df = process_data(key, afs_ids)
-
-        pattern = r"(\d{8}-\d{8})"
-        match = re.search(pattern, key)
-        start_finish_ids = match.group(1)
 
         save_to_s3(
             BUCKET_NAME,
             temp_df,
-            f"job_quality/early_years/evaluation_sample/metadata_interim/job_ads_sample_size_16392_metadata_{start_finish_ids}.parquet",
+            f"job_quality/early_years/evaluation_sample/metadata_interim_production_{args.production}/job_ads_sample_size_16392_metadata_chunk_{i+args.start_index}.parquet",
         )
 
         master_df = pd.concat([master_df, temp_df])
@@ -55,5 +76,5 @@ if __name__ == "__main__":
     save_to_s3(
         BUCKET_NAME,
         master_df,
-        f"job_quality/early_years/evaluation_sample/job_ads_sample_size_16392_metadata.parquet",
+        f"job_quality/early_years/evaluation_sample/job_ads_sample_size_16392_metadata_production_{args.production}.parquet",
     )
