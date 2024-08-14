@@ -40,7 +40,7 @@ if __name__ == "__main__":
         "--start_index",
         default=0,
         type=int,
-        help="Run the script in production mode or test",
+        help="What index to start from",
     )
 
     args = parser.parse_args()

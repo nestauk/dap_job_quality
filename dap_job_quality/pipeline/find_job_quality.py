@@ -63,8 +63,6 @@ jobbert_config = get_yaml_config(
     PROJECT_DIR / "dap_job_quality/config/jobbert_config.yaml"
 )
 
-TODAY = datetime.today().strftime("%Y-%m-%d")
-
 
 def split_ngrams(
     text: str, length: int = 6, n: int = 4
@@ -515,6 +513,13 @@ if __name__ == "__main__":
         help="Which dataset to predict job quality measures from, can be 'afs', 'random', or 'evaluation'",
     )
 
+    parser.add_argument(
+        "--start_from_chunk",
+        default=0,
+        type=int,
+        help="Which chunk to start from. Useful for picking up where you left off",
+    )
+
     args = parser.parse_args()
     logging.info(args)
 
@@ -533,10 +538,6 @@ if __name__ == "__main__":
         job_adverts = get_ojo_sample()
         id_col = "id"
         text_col = "description"
-    # elif args.job_ads_type == 'evaluation':
-    #     job_adverts = # FILL IN
-    # else:
-    #     # LOG warning message
 
     if not args.production & (len(job_adverts) > args.sample_size):
         job_adverts = job_adverts.sample(args.sample_size, random_state=42)
@@ -557,10 +558,10 @@ if __name__ == "__main__":
         for i in range(0, len(job_adverts), chunk_size)
     ]
 
-    interim_folder = f"job_quality/outputs/{args.job_ads_type}/interim/production_{args.production}_n_{len(job_adverts)}_{TODAY}"
+    interim_folder = f"job_quality/outputs/{args.job_ads_type}/interim/production_{args.production}_n_{len(job_adverts)}"
 
-    for i, job_chunk in tqdm(enumerate(job_ad_chunks)):
-        logging.info(f"Processing chunk {i}...")
+    for i, job_chunk in tqdm(enumerate(job_ad_chunks[args.start_from_chunk :])):
+        logging.info(f"Processing chunk {i+args.start_from_chunk}...")
 
         jq_df_filtered, _ = job_quality.extract_job_quality(
             job_chunk,
@@ -568,7 +569,7 @@ if __name__ == "__main__":
             text_col,
         )
 
-        filename = f"{interim_folder}/job_ads_chunk_{i}.parquet"
+        filename = f"{interim_folder}/job_ads_chunk_{i+args.start_from_chunk}.parquet"
         save_to_s3(
             BUCKET_NAME,
             jq_df_filtered[
@@ -595,7 +596,7 @@ if __name__ == "__main__":
     for file in files:
         output_data = pd.concat([output_data, load_s3_data(BUCKET_NAME, file)])
 
-    final_filename = f"job_quality/outputs/{args.job_ads_type}/job_ads_prod_{args.production}_n_{len(job_adverts)}_{TODAY}.parquet"
+    final_filename = f"job_quality/outputs/{args.job_ads_type}/job_ads_prod_{args.production}_n_{len(job_adverts)}.parquet"
     save_to_s3(
         BUCKET_NAME,
         output_data[
