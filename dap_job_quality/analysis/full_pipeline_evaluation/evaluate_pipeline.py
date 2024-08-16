@@ -12,6 +12,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from datetime import datetime
+from typing import Tuple
 
 mapping_evaluation_dir = "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/mapping_evaluation"
 
@@ -56,17 +57,11 @@ def get_keyword_lookups():
     tp_to_subcategory = dict(
         zip(keyword_lookup_data["target_phrase"], keyword_lookup_data["subcategory"])
     )
-    tp_to_dimension = dict(
-        zip(keyword_lookup_data["target_phrase"], keyword_lookup_data["dimension"])
-    )
-    subcategory_to_dimension = dict(
-        zip(keyword_lookup_data["subcategory"], keyword_lookup_data["dimension"])
-    )
 
-    return tp_to_subcategory, tp_to_dimension, subcategory_to_dimension
+    return tp_to_subcategory
 
 
-def load_evaluation_data(subcategory_to_dimension: dict) -> pd.DataFrame:
+def load_evaluation_data() -> pd.DataFrame:
     """
     Load the evaluation dataset and filter for any job adverts not labelled.
     """
@@ -75,6 +70,67 @@ def load_evaluation_data(subcategory_to_dimension: dict) -> pd.DataFrame:
     eval_data = eval_data[pd.notnull(eval_data["Labelled by?"])].reset_index(drop=True)
 
     return eval_data
+
+
+def predict_evaluation_data(
+    eval_data: pd.DataFrame, tp_to_subcategory: dict
+) -> Tuple[pd.DataFrame, dict]:
+    """
+    Predict JQ measures for the job adverts in the evaluation dataset
+    Arguments:
+            eval_data (pd.DataFrame): The evaluation data with an id and a description column.
+            tp_to_subcategory (dict): A dictionary mapping the target phrases to the subcategory.
+
+    Returns:
+            pd.DataFrame: A matrix of the counts of each predicted JQ measures (columns) per job id (rows).
+            dict: A dictionary with information about the predictions per job id (keys)
+                    e.g. {job_id: [(ngram, cosine similarity, target phrase, subcategory), ...]}
+    """
+
+    job_quality = JobQuality()
+    job_quality.load()
+
+    jq_predictions_df, _ = job_quality.extract_job_quality(
+        eval_data[["id", "description"]].drop_duplicates().reset_index(drop=True),
+        "id",
+        "description",
+    )
+
+    jq_predictions_df["subcategory"] = jq_predictions_df["target_phrase"].map(
+        tp_to_subcategory
+    )
+
+    # Get a matrix of predicted JQ measures (columns, binary) per job id (rows)
+    jq_predictions_per_id = (
+        pd.get_dummies(
+            jq_predictions_df[["id", "subcategory"]],
+            columns=["subcategory"],
+            prefix="prediction",
+        )
+        .groupby("id")
+        .sum()
+        .reset_index()
+    )
+
+    # Get the prediction information
+    jq_predictions_df["ngrams_with_cat"] = jq_predictions_df.apply(
+        lambda x: (
+            x["ngrams"],
+            x["cosine_similarity"],
+            x["target_phrase"],
+            tp_to_subcategory[x["target_phrase"]],
+        ),
+        axis=1,
+    )
+    pred_ngrams_per_id = {
+        k: list(v)
+        for k, v in jq_predictions_df.groupby("id")["ngrams_with_cat"]
+        .unique()
+        .to_dict()
+        .items()
+    }
+
+    return jq_predictions_per_id, pred_ngrams_per_id
 
 
 def get_error_type(truth, pred):
@@ -90,124 +146,58 @@ def get_error_type(truth, pred):
             return "FP"
 
 
-if __name__ == "__main__":
+def format_to_explore_errors_data(
+    comparison_df: pd.DataFrame, eval_data: pd.DataFrame, pred_ngrams_per_id: dict
+) -> pd.DataFrame:
+    """
+    Get data in format useful to explore errors
+    Arguments:
+            comparison_df (pd.DataFrame): Both truth and predicted results of whether a job advert contains each JQ quality measure
+            eval_data (pd.DataFrame): The original evaluation data - used to get the extra information about the job advert (e.g. sector)
+            pred_ngrams_per_id (dict): The ngrams extracted and predicted JQ measures per job ad
 
-    tp_to_subcategory, tp_to_dimension, subcategory_to_dimension = get_keyword_lookups()
+    Returns:
+            pd.DataFrame: A dataframe where each row is a job advert - the error type for each JQ measure is given, the true and predicted
+                    sentences/ngrams which contained JQ measures, and job advert information (e.g. description and sector)
+    """
 
-    eval_data = load_evaluation_data(subcategory_to_dimension)
-
-    per_job_ad = eval_data.groupby("id")[jq_cols].sum().reset_index()
-
-    per_job_ad["all_jq"] = per_job_ad[jq_cols].apply(
-        lambda x: list(set([jq_name for jq_name in jq_cols if x[jq_name] != 0])), axis=1
+    # Get the error types per job id for each JQ measure
+    jq_error_types_dict = {}
+    for jq_measure in jq_cols:
+        jq_error_types_dict[jq_measure] = comparison_df.apply(
+            lambda x: get_error_type(x[jq_measure], x[f"prediction_{jq_measure}"]),
+            axis=1,
+        ).tolist()
+    jq_error_analysis_df = pd.DataFrame(jq_error_types_dict)
+    jq_error_analysis_df["id"] = comparison_df["id"]
+    jq_error_analysis_df["n_incorrect"] = (
+        jq_error_analysis_df[jq_cols].isin(["FN", "FP"]).sum(axis=1)
     )
 
-    job_ad_desc = dict(zip(eval_data["id"], eval_data["description"]))
-
-    # Get the true labels in a dict format per sentence
-    true_labels = {}
+    # Get the sentences and JQ measures per job advert {job_id: {sentence: [JQ measures]}}
+    true_jq_sents_per_id = {}
     for job_ad_id, job_ad_labels in eval_data.dropna(how="all", subset=jq_cols).groupby(
         "id"
     ):
-        true_labels[job_ad_id] = (
+        true_jq_sents_per_id[job_ad_id] = (
             job_ad_labels.groupby("sentences")
             .apply(lambda x: x[jq_cols].any()[x[jq_cols].any()].index.tolist())
             .to_dict()
         )
 
-    # Predict job quality for evaluation dataset
-
-    job_quality = JobQuality()
-    job_quality.load()
-
-    eval_job_adverts = (
-        eval_data[["id", "description"]].drop_duplicates().reset_index(drop=True)
+    jq_error_analysis_df["jq_sentences"] = jq_error_analysis_df["id"].map(
+        true_jq_sents_per_id
     )
 
-    jq_df_filtered, job_id_to_target_phrase = job_quality.extract_job_quality(
-        eval_job_adverts, "id", "description"
-    )
-    jq_predictions = jq_df_filtered[["id", "target_phrase", "cosine_similarity"]]
-
-    jq_predictions["subcategory"] = jq_predictions["target_phrase"].map(
-        tp_to_subcategory
-    )
-    jq_predictions["dimension"] = jq_predictions["target_phrase"].map(tp_to_dimension)
-
-    per_job_ad_preds = (
-        pd.get_dummies(
-            jq_predictions[["id", "subcategory"]],
-            columns=["subcategory"],
-            prefix="prediction",
-        )
-        .groupby("id")
-        .sum()
-        .reset_index()
+    jq_error_analysis_df["pred_ngram_matched"] = jq_error_analysis_df["id"].map(
+        pred_ngrams_per_id
     )
 
-    comparison_df = per_job_ad.merge(per_job_ad_preds, on="id", how="left").fillna(
-        value=0
-    )
-
-    comparison_df_binary = comparison_df != 0
-    comparison_df_binary["id"] = comparison_df["id"]
-
-    class_rep_per_jq = {}
-    for jq_measure in jq_cols:
-        if f"prediction_{jq_measure}" in comparison_df_binary:
-            pred_list = comparison_df_binary[f"prediction_{jq_measure}"]
-        else:
-            pred_list = [False] * len(comparison_df_binary)
-
-        class_rep = classification_report(
-            comparison_df_binary[jq_measure], pred_list, output_dict=True
-        )
-        class_rep_per_jq[jq_measure] = class_rep
-
-    eval_results_df = pd.DataFrame(class_rep_per_jq).T.reset_index(
-        names="JQ_measure_name"
-    )
-
-    # When are the predictions incorrect?
-    # Get the prediction sentences
-    jq_df_filtered["ngrams_with_cat"] = jq_df_filtered.apply(
-        lambda x: (
-            x["ngrams"],
-            x["cosine_similarity"],
-            x["target_phrase"],
-            tp_to_subcategory[x["target_phrase"]],
-        ),
-        axis=1,
-    )
-    exact_pred_ngrams = {
-        k: list(v)
-        for k, v in jq_df_filtered.groupby("id")["ngrams_with_cat"]
-        .unique()
-        .to_dict()
-        .items()
-    }
-
-    jq_incorrect_dict = {}
-    for jq_measure in jq_cols:
-        jq_incorrect_dict[jq_measure] = comparison_df_binary.apply(
-            lambda x: get_error_type(x[jq_measure], x[f"prediction_{jq_measure}"]),
-            axis=1,
-        ).tolist()
-
-    jq_incorrect_df = pd.DataFrame(jq_incorrect_dict)
-    jq_incorrect_df["id"] = comparison_df_binary["id"]
-    jq_incorrect_df["description"] = jq_incorrect_df["id"].map(job_ad_desc)
-    jq_incorrect_df["true_labels"] = jq_incorrect_df["id"].map(true_labels)
-    jq_incorrect_df["n_incorrect"] = (
-        jq_incorrect_df[jq_cols].isin(["FN", "FP"]).sum(axis=1)
-    )
-
-    jq_incorrect_df = jq_incorrect_df.dropna(how="all", subset=jq_cols)
-    jq_incorrect_df["pred_ngram_matched"] = jq_incorrect_df["id"].map(exact_pred_ngrams)
-
+    # Add extra information about this job advert
     job_ad_context = eval_data[
         [
             "id",
+            "description",
             "company_raw",
             "job_title_raw",
             "job_location_raw",
@@ -221,7 +211,53 @@ if __name__ == "__main__":
             "itl_3_name",
         ]
     ].drop_duplicates()
-    jq_incorrect_df = jq_incorrect_df.merge(job_ad_context, on="id")
+    jq_error_analysis_df = jq_error_analysis_df.merge(job_ad_context, on="id")
+
+    return jq_error_analysis_df
+
+
+if __name__ == "__main__":
+
+    tp_to_subcategory = get_keyword_lookups()
+
+    eval_data = load_evaluation_data()
+
+    # Predict JQ measures per job advert
+    jq_predictions_per_id, pred_ngrams_per_id = predict_evaluation_data(
+        eval_data, tp_to_subcategory
+    )
+
+    # Get the true JQ measures per job advert
+    jq_truth_per_id = eval_data.groupby("id")[jq_cols].sum().reset_index()
+
+    # Evaluate truth vs predictions
+
+    # Merge true and predicted counts together and binarise (JQ present or not)
+    comparison_counts = jq_truth_per_id.merge(
+        jq_predictions_per_id, on="id", how="left"
+    ).fillna(value=0)
+    comparison_df = comparison_counts != 0
+    comparison_df["id"] = comparison_counts["id"]
+
+    # Get classification report for each JQ measure
+    class_rep_per_jq = {}
+    for jq_measure in jq_cols:
+        if f"prediction_{jq_measure}" in comparison_df:
+            pred_list = comparison_df[f"prediction_{jq_measure}"]
+        else:
+            pred_list = [False] * len(comparison_df)
+        class_rep = classification_report(
+            comparison_df[jq_measure], pred_list, output_dict=True
+        )
+        class_rep_per_jq[jq_measure] = class_rep
+
+    eval_results_df = pd.DataFrame(class_rep_per_jq).T.reset_index(
+        names="JQ_measure_name"
+    )
+
+    jq_error_analysis_df = format_to_explore_errors_data(
+        comparison_df, eval_data, pred_ngrams_per_id
+    )
 
     # Save results
     TODAY = datetime.today().strftime("%Y-%m-%d")
@@ -230,4 +266,6 @@ if __name__ == "__main__":
         f"{evaluation_results_dir}/JQ_evaluation_results_{TODAY}.csv"
     )
 
-    jq_incorrect_df.to_csv(f"{evaluation_results_dir}/JQ_prediction_errors_{TODAY}.csv")
+    jq_error_analysis_df.to_csv(
+        f"{evaluation_results_dir}/JQ_prediction_errors_{TODAY}.csv"
+    )

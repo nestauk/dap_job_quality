@@ -2,6 +2,19 @@
 
 ## Datasets
 
+### Evaluation data
+
+We ran
+
+```
+python dap_job_quality/analysis/full_pipeline_evaluation/prepare_sample.py
+
+```
+
+to create a sample of the job adverts in the hold-on test set (for the job quality sentence classifier), plus some extra job adverts from categories key to the early years analysis.
+
+We then manually labelled 100 of these with whether each of the job quality measures were in them or not. This manually labelled dataset is in `s3://open-jobs-lake/job_quality/outputs/evaluation/evaluation_data_12_08_24_per_sentence_evaluation.csv`.
+
 ### Random sample
 
 We used a version of the mapping algorithm to predict job quality measures for a sample of job adverts. These predictions were manually rated for their quality. We use the mappings which were given a 'good' rating as part of our evaluation dataset.
@@ -26,55 +39,59 @@ To run the evaluation run
 python dap_job_quality/analysis/full_pipeline_evaluation/evaluate_pipeline.py
 ```
 
-This will run the evaluation on 427 job adverts.
+This will run the evaluation on the manually labelled 100 job adverts. The number of each JQ measure labelled is as following:
 
-| JQ measure       | Number of job adverts |
-| ---------------- | --------------------- |
-| FLEX_HOURS       | 72                    |
-| CONTRACT         | 70                    |
-| L&D              | 38                    |
-| CARING           | 37                    |
-| CAREER           | 35                    |
-| LEAVE            | 34                    |
-| COMP             | 32                    |
-| PERKS            | 31                    |
-| HOURS            | 23                    |
-| SOCIAL           | 22                    |
-| HEALTH           | 15                    |
-| REWARD           | 7                     |
-| MISC             | 4                     |
-| SENSE OF PURPOSE | 3                     |
-| SHIFT            | 3                     |
-| M_HEALTH         | 1                     |
+| JQ measure           | Number of job adverts |
+| -------------------- | --------------------- |
+| L&D                  | 48                    |
+| CAREER               | 25                    |
+| HOURS                | 59                    |
+| FLEX_HOURS           | 35                    |
+| SHIFT                | 17                    |
+| LOC                  | 36                    |
+| FLEX_LOC             | 28                    |
+| CONTRACT             | 39                    |
+| LEAVE                | 30                    |
+| COMP                 | 86                    |
+| PERKS                | 55                    |
+| CARING               | 8                     |
+| DISABILITY           | 2                     |
+| HEALTH               | 7                     |
+| M_HEALTH             | 4                     |
+| SPONSORSHIP          | 2                     |
+| REWARD               | 3                     |
+| MISC                 | 13                    |
+| AUTONOMY             | 1                     |
+| SENSE OF PURPOSE     | 4                     |
+| SOCIAL               | 22                    |
+| VOICE REPRESENTATION | 0                     |
 
 This will output
 
-1. the JQ predictions for each job advert in the evaluation data (`s3://open-jobs-lake/job_quality/outputs/evaluation/JQ_predictions_{DATE}.csv`)
-2. the recall results for each job quality level and job quality measure within this level (`s3://open-jobs-lake/job_quality/outputs/evaluation/recall_results_{DATE}.csv`)
+1. the JQ predictions and truth for each job advert in the evaluation data (`s3://open-jobs-lake/job_quality/outputs/evaluation/JQ_prediction_errors_{DATE}.csv`)
+2. the evaluation results for each job quality level and job quality measure within this level (`s3://open-jobs-lake/job_quality/outputs/evaluation/JQ_evaluation_results_{DATE}.csv`)
 
-| JQ_measure_name  | JQ_level    | prop_ads_truth_and_pred | n_ads_truth | n_ads_pred | prop_ads_pred |
-| ---------------- | ----------- | ----------------------- | ----------- | ---------- | ------------- |
-| MISC             | subcategory | 0.75                    | 4           | 24         | 0.09          |
-| COMP             | subcategory | 0.95                    | 20          | 185        | 0.70          |
-| PERKS            | subcategory | 1.00                    | 19          | 166        | 0.63          |
-| L&D              | subcategory | 1.00                    | 29          | 172        | 0.65          |
-| LEAVE            | subcategory | 0.91                    | 23          | 126        | 0.48          |
-| FLEX_HOURS       | subcategory | 1.00                    | 53          | 120        | 0.46          |
-| CARING           | subcategory | 1.00                    | 28          | 115        | 0.44          |
-| CAREER           | subcategory | 1.00                    | 33          | 101        | 0.38          |
-| HOURS            | subcategory | 1.00                    | 15          | 209        | 0.79          |
-| HEALTH           | subcategory | 1.00                    | 13          | 58         | 0.22          |
-| CONTRACT         | subcategory | 0.76                    | 66          | 117        | 0.44          |
-| SOCIAL           | subcategory | 1.00                    | 18          | 90         | 0.34          |
-| REWARD           | subcategory | 1.00                    | 7           | 8          | 0.03          |
-| SENSE OF PURPOSE | subcategory | 0.33                    | 3           | 7          | 0.03          |
-| M_HEALTH         | subcategory | 1.00                    | 1           | 5          | 0.02          |
-| SHIFT            | subcategory | 1.00                    | 3           | 15         | 0.06          |
-
-An interpretation of these results for the FLEX_HOURS JQ measure is:
-
-- 53 of the job adverts in the evaluation data had this measure.
-- 100% of these 53 job adverts also had `FLEX_HOURS` predicted (recall).
-- 120 of the job adverts in the evaluation data had this measure predicted - this is 46% of the evaluation job adverts.
-
-Note: this gives us no indication of precision, so caution should be given especially when the `prop_ads_pred` value is close to 1.
+|           JQ measure | precision | recall | f1-score | support |
+| -------------------: | --------: | -----: | -------: | ------: |
+|                  L&D |     0.953 |  0.854 |    0.901 |    48.0 |
+|               CAREER |     0.697 |  0.920 |    0.793 |    25.0 |
+|                HOURS |     0.855 |  1.000 |    0.922 |    59.0 |
+|           FLEX_HOURS |     0.609 |  0.800 |    0.691 |    35.0 |
+|                SHIFT |     0.800 |  0.235 |    0.364 |    17.0 |
+|                  LOC |     0.500 |  0.250 |    0.333 |    36.0 |
+|             FLEX_LOC |     0.889 |  0.286 |    0.432 |    28.0 |
+|             CONTRACT |     0.909 |  0.513 |    0.656 |    39.0 |
+|                LEAVE |     0.652 |  1.000 |    0.789 |    30.0 |
+|                 COMP |     1.000 |  0.849 |    0.918 |    86.0 |
+|                PERKS |     0.881 |  0.945 |    0.912 |    55.0 |
+|               CARING |     0.381 |  1.000 |    0.552 |     8.0 |
+|           DISABILITY |     0.000 |  0.000 |    0.000 |     2.0 |
+|               HEALTH |     0.316 |  0.857 |    0.462 |     7.0 |
+|             M_HEALTH |     0.400 |  0.500 |    0.444 |     4.0 |
+|          SPONSORSHIP |     1.000 |  1.000 |    1.000 |     2.0 |
+|               REWARD |     0.000 |  0.000 |    0.000 |     3.0 |
+|                 MISC |     0.300 |  0.231 |    0.261 |    13.0 |
+|             AUTONOMY |     0.500 |  1.000 |    0.667 |     1.0 |
+|     SENSE OF PURPOSE |     0.000 |  0.000 |    0.000 |     4.0 |
+|               SOCIAL |     0.320 |  0.364 |    0.340 |    22.0 |
+| VOICE REPRESENTATION |     0.000 |  0.000 |    0.000 |     0.0 |
