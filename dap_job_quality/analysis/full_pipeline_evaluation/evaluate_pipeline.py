@@ -1,5 +1,12 @@
-from dap_job_quality.getters.train_val_test import get_df
 from dap_job_quality.pipeline.find_job_quality import JobQuality
+
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    classification_report,
+)
 
 import pandas as pd
 from tqdm import tqdm
@@ -9,6 +16,33 @@ from datetime import datetime
 mapping_evaluation_dir = "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/mapping_evaluation"
 
 evaluation_results_dir = "s3://open-jobs-lake/job_quality/outputs/evaluation"
+
+evaluation_file_name = "evaluation_data_12_08_24_per_sentence_evaluation.csv"
+
+jq_cols = [
+    "L&D",
+    "CAREER",
+    "HOURS",
+    "FLEX_HOURS",
+    "SHIFT",
+    "LOC",
+    "FLEX_LOC",
+    "CONTRACT",
+    "LEAVE",
+    "COMP",
+    "PERKS",
+    "CARING",
+    "DISABILITY",
+    "HEALTH",
+    "M_HEALTH",
+    "SPONSORSHIP",
+    "REWARD",
+    "MISC",
+    "AUTONOMY",
+    "SENSE OF PURPOSE",
+    "SOCIAL",
+    "VOICE REPRESENTATION",
+]
 
 
 def get_keyword_lookups():
@@ -32,53 +66,54 @@ def get_keyword_lookups():
     return tp_to_subcategory, tp_to_dimension, subcategory_to_dimension
 
 
-def combine_evaluation_data(subcategory_to_dimension: dict) -> pd.DataFrame:
+def load_evaluation_data(subcategory_to_dimension: dict) -> pd.DataFrame:
     """
-    Load the files needed for creating an evaluation dataset, process and merge them together.
-    Remove any job adverts which were also in the JQ sentence classifier training or validation.
+    Load the evaluation dataset and filter for any job adverts not labelled.
     """
 
-    train_df = get_df("train")
-    val_df = get_df("val")
-
-    # Sentences with spans found, then these checked
-    eval_data = pd.read_csv(
-        f"{mapping_evaluation_dir}/sample_10000_evaluation_080824.csv"
-    )
-    eval_data = eval_data[eval_data["rating"] == "good"].reset_index()
-
-    # Full job ads with which type of contract was found
-    contract_data = pd.read_csv(
-        f"{mapping_evaluation_dir}/contract_type_sample_080824.csv"
-    )
-    contract_data = contract_data[
-        contract_data["Contract_type_quality?"].isin(
-            ["Temporary", "Contract", "Permanent"]
-        )
-    ].reset_index(drop=True)
-    contract_data.rename(
-        columns={"Contract_type_quality?": "target_phrase"}, inplace=True
-    )
-    contract_data["subcategory"] = "CONTRACT"
-    contract_data["dimension"] = subcategory_to_dimension["CONTRACT"]
-
-    # Join together
-    eval_data = pd.concat(
-        [eval_data.rename(columns={"clean_description": "description"}), contract_data]
-    ).reset_index(drop=True)
-
-    # Check all job adverts in the training and validation of the JQ sentence classifier aren't included
-    train_val_ids = set(train_df["id"].tolist() + val_df["id"].tolist())
-    eval_data = eval_data[~eval_data["id"].isin(train_val_ids)]
+    eval_data = pd.read_csv(f"{evaluation_results_dir}/{evaluation_file_name}")
+    eval_data = eval_data[pd.notnull(eval_data["Labelled by?"])].reset_index(drop=True)
 
     return eval_data
+
+
+def get_error_type(truth, pred):
+    if truth == True:
+        if pred == False:
+            return "FN"
+        else:
+            return "TP"
+    else:
+        if pred == False:
+            return "TN"
+        else:
+            return "FP"
 
 
 if __name__ == "__main__":
 
     tp_to_subcategory, tp_to_dimension, subcategory_to_dimension = get_keyword_lookups()
 
-    eval_data = combine_evaluation_data(subcategory_to_dimension)
+    eval_data = load_evaluation_data(subcategory_to_dimension)
+
+    per_job_ad = eval_data.groupby("id")[jq_cols].sum().reset_index()
+
+    per_job_ad["all_jq"] = per_job_ad[jq_cols].apply(
+        lambda x: list(set([jq_name for jq_name in jq_cols if x[jq_name] != 0])), axis=1
+    )
+
+    job_ad_desc = dict(zip(eval_data["id"], eval_data["description"]))
+
+    # Get the true labels in a dict format per sentence
+    true_labels = {}
+    for job_ad_id, job_ad_labels in eval_data.dropna(how="all", subset=jq_cols).groupby(
+        "id"
+    ):
+        true_labels[job_ad_id] = (
+            job_ad_labels.groupby("sentences")
+            .apply(lambda x: x[jq_cols].any()[x[jq_cols].any()].index.tolist())
+            .to_dict()
+        )
 
     # Predict job quality for evaluation dataset
 
@@ -89,57 +124,110 @@ if __name__ == "__main__":
         eval_data[["id", "description"]].drop_duplicates().reset_index(drop=True)
     )
 
-    chunk_size = 50
-    job_ad_chunks = [
-        eval_job_adverts.iloc[i : i + chunk_size]
-        for i in range(0, len(eval_job_adverts), chunk_size)
-    ]
-    jq_predictions = pd.DataFrame()
-    for i, job_chunk in tqdm(enumerate(job_ad_chunks)):
-        jq_df_filtered_chunk, _ = job_quality.extract_job_quality(
-            job_chunk, "id", "description"
-        )
-        chunk_predictions = jq_df_filtered_chunk[
-            ["id", "target_phrase", "cosine_similarity"]
-        ]
-
-        if len(jq_predictions) == 0:
-            jq_predictions = chunk_predictions
-        else:
-            jq_predictions = pd.concat([jq_predictions, chunk_predictions])
+    jq_df_filtered, job_id_to_target_phrase = job_quality.extract_job_quality(
+        eval_job_adverts, "id", "description"
+    )
+    jq_predictions = jq_df_filtered[["id", "target_phrase", "cosine_similarity"]]
 
     jq_predictions["subcategory"] = jq_predictions["target_phrase"].map(
         tp_to_subcategory
     )
     jq_predictions["dimension"] = jq_predictions["target_phrase"].map(tp_to_dimension)
 
-    # The proportion of job adverts we know to contain a particular JQ measure
-    # which had this measure predicted too.
-    eval_results = {}
-    for jq_level in ["dimension", "subcategory", "target_phrase"]:
-        for jq_measure in eval_data[jq_level].unique():
-            # The job advert ids which have this measure (truth)
-            truth_ids = set(eval_data[eval_data[jq_level] == jq_measure]["id"])
-            # The job advert ids predicted to have this measure
-            pred_ids = set(jq_predictions[jq_predictions[jq_level] == jq_measure]["id"])
-            eval_results[jq_measure] = {
-                "JQ_level": jq_level,
-                # The proportion of job ads which have this measure which were also predicted to have it
-                "prop_ads_truth_and_pred": len(truth_ids.intersection(pred_ids))
-                / len(truth_ids),
-                "n_ads_truth": len(truth_ids),
-                "n_ads_pred": len(pred_ids),
-                # The proportion of all job ads predicted to have this measure
-                "prop_ads_pred": len(pred_ids) / jq_predictions["id"].nunique(),
-            }
+    per_job_ad_preds = (
+        pd.get_dummies(
+            jq_predictions[["id", "subcategory"]],
+            columns=["subcategory"],
+            prefix="prediction",
+        )
+        .groupby("id")
+        .sum()
+        .reset_index()
+    )
 
-    eval_results_df = pd.DataFrame(eval_results).T.reset_index(names="JQ_measure_name")
+    comparison_df = per_job_ad.merge(per_job_ad_preds, on="id", how="left").fillna(
+        value=0
+    )
+
+    comparison_df_binary = comparison_df != 0
+    comparison_df_binary["id"] = comparison_df["id"]
+
+    class_rep_per_jq = {}
+    for jq_measure in jq_cols:
+        if f"prediction_{jq_measure}" in comparison_df_binary:
+            pred_list = comparison_df_binary[f"prediction_{jq_measure}"]
+        else:
+            pred_list = [False] * len(comparison_df_binary)
+
+        class_rep = classification_report(
+            comparison_df_binary[jq_measure], pred_list, output_dict=True
+        )
+        class_rep_per_jq[jq_measure] = class_rep
+
+    eval_results_df = pd.DataFrame(class_rep_per_jq).T.reset_index(
+        names="JQ_measure_name"
+    )
+
+    # When are the predictions incorrect?
+    # Get the prediction sentences
+    jq_df_filtered["ngrams_with_cat"] = jq_df_filtered.apply(
+        lambda x: (
+            x["ngrams"],
+            x["cosine_similarity"],
+            x["target_phrase"],
+            tp_to_subcategory[x["target_phrase"]],
+        ),
+        axis=1,
+    )
+    exact_pred_ngrams = {
+        k: list(v)
+        for k, v in jq_df_filtered.groupby("id")["ngrams_with_cat"]
+        .unique()
+        .to_dict()
+        .items()
+    }
+
+    jq_incorrect_dict = {}
+    for jq_measure in jq_cols:
+        jq_incorrect_dict[jq_measure] = comparison_df_binary.apply(
+            lambda x: get_error_type(x[jq_measure], x[f"prediction_{jq_measure}"]),
+            axis=1,
+        ).tolist()
+
+    jq_incorrect_df = pd.DataFrame(jq_incorrect_dict)
+    jq_incorrect_df["id"] = comparison_df_binary["id"]
+    jq_incorrect_df["description"] = jq_incorrect_df["id"].map(job_ad_desc)
+    jq_incorrect_df["true_labels"] = jq_incorrect_df["id"].map(true_labels)
+    jq_incorrect_df["n_incorrect"] = (
+        jq_incorrect_df[jq_cols].isin(["FN", "FP"]).sum(axis=1)
+    )
+
+    jq_incorrect_df = jq_incorrect_df.dropna(how="all", subset=jq_cols)
+    jq_incorrect_df["pred_ngram_matched"] = jq_incorrect_df["id"].map(exact_pred_ngrams)
+
+    job_ad_context = eval_data[
+        [
+            "id",
+            "company_raw",
+            "job_title_raw",
+            "job_location_raw",
+            "created",
+            "type",
+            "sector",
+            "parent_sector",
+            "knowledge_domain",
+            "occupation",
+            "itl_3_code",
+            "itl_3_name",
+        ]
+    ].drop_duplicates()
+    jq_incorrect_df = jq_incorrect_df.merge(job_ad_context, on="id")
 
     # Save results
     TODAY = datetime.today().strftime("%Y-%m-%d")
 
-    jq_predictions.merge(eval_job_adverts, on="id", how="left").to_csv(
-        f"{evaluation_results_dir}/JQ_predictions_{TODAY}.csv"
+    eval_results_df.to_csv(
+        f"{evaluation_results_dir}/JQ_evaluation_results_{TODAY}.csv"
     )
 
-    eval_results_df.to_csv(f"{evaluation_results_dir}/recall_results_{TODAY}.csv")
+    jq_incorrect_df.to_csv(f"{evaluation_results_dir}/JQ_prediction_errors_{TODAY}.csv")
