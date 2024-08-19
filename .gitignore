@@ -114,6 +114,8 @@ target/
 !/outputs/models/*.md
 !/outputs/models/sentence_classifier/*.md
 /outputs/*.csv
+/dap_job_quality/analysis/afs_analysis/outputs/*
+/dap_job_quality/analysis/random_sample/outputs/*
 
 # Mac OS-specific storage files
 .DS_Store
