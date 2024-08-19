@@ -71,27 +71,27 @@ This will output
 1. the JQ predictions and truth for each job advert in the evaluation data (`s3://open-jobs-lake/job_quality/outputs/evaluation/JQ_prediction_errors_{DATE}.csv`)
 2. the evaluation results for each job quality level and job quality measure within this level (`s3://open-jobs-lake/job_quality/outputs/evaluation/JQ_evaluation_results_{DATE}.csv`)
 
-|           JQ measure | precision | recall | f1-score | support |
-| -------------------: | --------: | -----: | -------: | ------: |
-|                  L&D |     0.953 |  0.854 |    0.901 |    48.0 |
-|               CAREER |     0.697 |  0.920 |    0.793 |    25.0 |
-|                HOURS |     0.855 |  1.000 |    0.922 |    59.0 |
-|           FLEX_HOURS |     0.609 |  0.800 |    0.691 |    35.0 |
-|                SHIFT |     0.800 |  0.235 |    0.364 |    17.0 |
-|                  LOC |     0.500 |  0.250 |    0.333 |    36.0 |
-|             FLEX_LOC |     0.889 |  0.286 |    0.432 |    28.0 |
-|             CONTRACT |     0.909 |  0.513 |    0.656 |    39.0 |
-|                LEAVE |     0.652 |  1.000 |    0.789 |    30.0 |
-|                 COMP |     1.000 |  0.849 |    0.918 |    86.0 |
-|                PERKS |     0.881 |  0.945 |    0.912 |    55.0 |
-|               CARING |     0.381 |  1.000 |    0.552 |     8.0 |
-|           DISABILITY |     0.000 |  0.000 |    0.000 |     2.0 |
-|               HEALTH |     0.316 |  0.857 |    0.462 |     7.0 |
-|             M_HEALTH |     0.400 |  0.500 |    0.444 |     4.0 |
-|          SPONSORSHIP |     1.000 |  1.000 |    1.000 |     2.0 |
-|               REWARD |     0.000 |  0.000 |    0.000 |     3.0 |
-|                 MISC |     0.300 |  0.231 |    0.261 |    13.0 |
-|             AUTONOMY |     0.500 |  1.000 |    0.667 |     1.0 |
-|     SENSE OF PURPOSE |     0.000 |  0.000 |    0.000 |     4.0 |
-|               SOCIAL |     0.320 |  0.364 |    0.340 |    22.0 |
-| VOICE REPRESENTATION |     0.000 |  0.000 |    0.000 |     0.0 |
+| jq_measure           | precision | recall | f1-score | support |
+| -------------------- | --------- | ------ | -------- | ------- |
+| L&D                  | 0.875     | 0.875  | 0.875    | 48.0    |
+| CAREER               | 0.750     | 0.720  | 0.735    | 25.0    |
+| HOURS                | 0.855     | 1.000  | 0.922    | 59.0    |
+| FLEX_HOURS           | 0.612     | 0.857  | 0.714    | 35.0    |
+| SHIFT                | 0.714     | 0.294  | 0.417    | 17.0    |
+| LOC                  | 0.619     | 0.342  | 0.441    | 38.0    |
+| FLEX_LOC             | 0.720     | 0.900  | 0.800    | 20.0    |
+| CONTRACT             | 0.781     | 0.641  | 0.704    | 39.0    |
+| LEAVE                | 0.652     | 1.000  | 0.789    | 30.0    |
+| COMP                 | 1.000     | 0.860  | 0.925    | 86.0    |
+| PERKS                | 0.883     | 0.964  | 0.922    | 55.0    |
+| CARING               | 0.381     | 1.000  | 0.552    | 8.0     |
+| DISABILITY           | 0.000     | 0.000  | 0.000    | 2.0     |
+| HEALTH               | 0.545     | 0.857  | 0.667    | 7.0     |
+| M_HEALTH             | 0.400     | 0.500  | 0.444    | 4.0     |
+| SPONSORSHIP          | 1.000     | 1.000  | 1.000    | 2.0     |
+| REWARD               | 0.000     | 0.000  | 0.000    | 3.0     |
+| MISC                 | 0.300     | 0.231  | 0.261    | 13.0    |
+| AUTONOMY             | 0.500     | 1.000  | 0.667    | 1.0     |
+| SENSE OF PURPOSE     | 0.000     | 0.000  | 0.000    | 4.0     |
+| SOCIAL               | 0.320     | 0.364  | 0.340    | 22.0    |
+| VOICE REPRESENTATION | 0.000     | 0.000  | 0.000    | 0.0     |

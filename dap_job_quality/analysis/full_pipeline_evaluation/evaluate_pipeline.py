@@ -1,4 +1,5 @@
 from dap_job_quality.pipeline.find_job_quality import JobQuality
+from dap_job_quality.getters.keywords import get_keywords
 
 from sklearn.metrics import (
     accuracy_score,
@@ -18,7 +19,7 @@ mapping_evaluation_dir = "s3://open-jobs-lake/job_quality/sentence_classifier/in
 
 evaluation_results_dir = "s3://open-jobs-lake/job_quality/outputs/evaluation"
 
-evaluation_file_name = "evaluation_data_12_08_24_per_sentence_evaluation.csv"
+evaluation_file_name = "evaluation_data_12_08_24_per_sentence_evaluation_19_08_24.csv"
 
 jq_cols = [
     "L&D",
@@ -51,9 +52,8 @@ def get_keyword_lookups():
     Use the keyword lookup table to create mappings between the JQ taxonomy levels
     """
 
-    keyword_lookup_data = pd.read_csv(
-        f"{mapping_evaluation_dir}/keyword_lookup_v7_080824.csv"
-    )
+    keyword_lookup_data = get_keywords()
+
     tp_to_subcategory = dict(
         zip(keyword_lookup_data["target_phrase"], keyword_lookup_data["subcategory"])
     )
