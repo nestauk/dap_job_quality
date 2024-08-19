@@ -263,9 +263,9 @@ if __name__ == "__main__":
     TODAY = datetime.today().strftime("%Y-%m-%d")
 
     eval_results_df.to_csv(
-        f"{evaluation_results_dir}/JQ_evaluation_results_{TODAY}.csv"
+        f"{evaluation_results_dir}/JQ_evaluation_results_{TODAY}_diff_thresholds.csv"
     )
 
     jq_error_analysis_df.to_csv(
-        f"{evaluation_results_dir}/JQ_prediction_errors_{TODAY}.csv"
+        f"{evaluation_results_dir}/JQ_prediction_errors_{TODAY}_diff_thresholds.csv"
     )
