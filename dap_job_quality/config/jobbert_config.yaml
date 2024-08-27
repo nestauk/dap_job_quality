@@ -2,7 +2,15 @@ model: jjzha/jobbert-base-cased
 max_length: 128
 seed: 42
 jq_threshold: 0.3
-cs_threshold: 0.55
+cs_threshold:
+  CAREER: 0.6
+  FLEX_HOURS: 0.65
+  HOURS: 0.6
+  FLEX_LOC: 0.6
+  LEAVE: 0.65
+  CONTRACT: 0.5
+  LOC: 0.6
+  OTHER: 0.55
 
 sweep_config:
   method: random
