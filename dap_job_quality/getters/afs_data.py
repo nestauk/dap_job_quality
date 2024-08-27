@@ -76,19 +76,19 @@ def get_jq_sentences_and_matches() -> pd.DataFrame:
 def get_stratified_sample() -> pd.DataFrame:
     return load_s3_data(
         BUCKET_NAME,
-        "job_quality/early_years/evaluation_sample/job_ads_by_sector_region_sample_size_21392.parquet",
+        "job_quality/early_years/evaluation_sample/job_ads_by_sector_region_sample_size_19896.parquet",
     )
 
 
 def get_enhanced_salary_data():
     """
     Produced by `pipeline/eyp/eyp_auxiliary_data.py`. That script takes in the raw data, filters it to IDs that
-    are in "job_quality/early_years/evaluation_sample/job_ads_sample_size_16392.parquet", and retrieves the raw salary info
+    are in "job_quality/early_years/evaluation_sample/job_ads_by_sector_region_sample_size_19896.parquet", and retrieves the raw salary info
     for those records.
 
     Returns:
         pd.DataFrame: _description_
     """
     return pd.read_parquet(
-        "s3://open-jobs-lake/job_quality/early_years/evaluation_sample/job_ads_sample_size_16392_metadata_production_True.parquet"
+        "s3://open-jobs-lake/job_quality/early_years/evaluation_sample/job_ads_by_sector_region_sample_size_19896_metadata_production_True.parquet"
     )

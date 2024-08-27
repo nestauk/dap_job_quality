@@ -20,13 +20,13 @@ GEO_MAPPING = {
 
 SECTOR_MAPPING = {
     "eyp": ["Early Years Practitioner"],
-    "other teaching": [
-        "Teaching Assistant ",
-        "Supply Teacher",
+    "teaching assistant": ["Teaching Assistant"],
+    "school teacher": [
         "Primary School Teacher",
-        "Special Needs Teacher",
         "Secondary School Teacher",
     ],
+    "supply teacher": ["Supply Teacher"],
+    "special needs teacher": ["Special Needs Teacher"],
     "non education": ["Retail Assistant", "Waiter"],
 }
 
@@ -77,6 +77,7 @@ if __name__ == "__main__":
     sample_n_rows = len(sampled_df)
     logging.info(f"Size of sample: {sample_n_rows}")
 
+    print(sampled_df.groupby(["sector", "geo"]).agg("size"))
     save_to_s3(
         BUCKET_NAME,
         sampled_df,
