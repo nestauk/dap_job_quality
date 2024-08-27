@@ -241,6 +241,9 @@ class JobQuality(object):
 
         # DataFrame containing the target phrases to match against.
         self.LOOKUP = get_keywords()
+        self.tp_to_subcategory = dict(
+            zip(self.LOOKUP["target_phrase"], self.LOOKUP["subcategory"])
+        )
         self.target_phrases = self.LOOKUP["target_phrase"].tolist()
         # Calculate the embeddings for the target phrases since this is only needs to happen once
         logging.info(
@@ -408,7 +411,17 @@ class JobQuality(object):
             most_similar_pairs, columns=["ngrams", "target_phrase", "cosine_similarity"]
         )
 
-        return matches[matches["cosine_similarity"] >= self.CS_THRESHOLD]
+        matches["subcategory"] = matches["target_phrase"].map(self.tp_to_subcategory)
+
+        # Use a specific threshold depending on the subcategory, if there isn't one
+        # use the generic threshold in the 'OTHER' category
+        return matches[
+            matches.apply(
+                lambda x: x["cosine_similarity"]
+                >= self.CS_THRESHOLD.get(x["subcategory"], self.CS_THRESHOLD["OTHER"]),
+                axis=1,
+            )
+        ]
 
     def match_ngrams_to_adverts(
         self, matches: pd.DataFrame, job_quality_df_long: pd.DataFrame
