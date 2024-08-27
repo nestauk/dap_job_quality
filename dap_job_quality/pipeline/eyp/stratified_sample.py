@@ -7,43 +7,63 @@ from dap_job_quality.getters.data_getters import save_to_s3
 
 SEED = 42
 
+GEO_MAPPING = {
+    "north": [
+        "North East (England)",
+        "North West (England)",
+        "Yorkshire and the Humber",
+    ],
+    "midlands": ["West Midlands (England)", "East Midlands (England)"],
+    "south": ["South East (England)", "South West (England)", "East of England"],
+    "london": ["London"],
+}
+
+SECTOR_MAPPING = {
+    "eyp": ["Early Years Practitioner"],
+    "other teaching": [
+        "Teaching Assistant ",
+        "Supply Teacher",
+        "Primary School Teacher",
+        "Special Needs Teacher",
+        "Secondary School Teacher",
+    ],
+    "non education": ["Retail Assistant", "Waiter"],
+}
+
+
+def map_groups(name, mapping_dict):
+    for key, names in mapping_dict.items():
+        if name in names:
+            return key
+    return "other"
+
+
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(
-    #     description="Script to run with command line arguments."
-    # )
-
-    # parser.add_argument(
-    #     "--sample_size",
-    #     default=500,
-    #     type=int,
-    #     help="How many job ads do you want in your sample?",
-    # )
-
-    # args = parser.parse_args()
-    # logging.info(args)
 
     eyp = get_eyp_ads()
     sim_occs = get_sim_occ_ads()
     all_job_ads = pd.concat([eyp, sim_occs], axis=0).drop_duplicates()
 
     all_job_ads = all_job_ads[
-        all_job_ads["itl_1_name"] != "Northern Ireland"
-    ]  # NI has fewer than 100
+        ~all_job_ads["itl_1_name"].isin(["Northern Ireland", "Scotland", "Wales"])
+    ]  # Excluding adjacent nations for now
+
+    all_job_ads["geo"] = all_job_ads["itl_1_name"].apply(
+        map_groups, args=(GEO_MAPPING,)
+    )
+    all_job_ads["sector_group"] = all_job_ads["sector"].apply(
+        map_groups, args=(SECTOR_MAPPING,)
+    )
 
     all_job_ads["year"] = pd.to_datetime(all_job_ads["created"]).dt.year
     # Ideally we would stratify by ITL 1 as well but the minimum sample size ends up too small
     all_job_ads["stratify_col"] = (
-        all_job_ads["year"].astype(str) + "_" + all_job_ads["sector"]
+        all_job_ads["geo"].astype(str) + "_" + all_job_ads["sector_group"]
     )
 
     all_job_ads = all_job_ads[all_job_ads["itl_1_code"].notnull()]
     all_job_ads = all_job_ads[all_job_ads["year"] > 2020]
     logging.info(f"Total number of job ads (post 2020): {len(all_job_ads)}")
-
-    # Identify and remove classes with fewer than two members
-    value_counts = all_job_ads["stratify_col"].value_counts()
-    to_keep = value_counts[value_counts > 2].index
-    all_job_ads = all_job_ads[all_job_ads["stratify_col"].isin(to_keep)]
 
     grouped = all_job_ads.groupby("stratify_col")
     sample_size = min(grouped.size())  # Minimum group size to ensure equal samples
@@ -60,5 +80,5 @@ if __name__ == "__main__":
     save_to_s3(
         BUCKET_NAME,
         sampled_df,
-        f"job_quality/early_years/evaluation_sample/job_ads_sample_size_{sample_n_rows}.parquet",
+        f"job_quality/early_years/evaluation_sample/job_ads_by_sector_region_sample_size_{sample_n_rows}.parquet",
     )

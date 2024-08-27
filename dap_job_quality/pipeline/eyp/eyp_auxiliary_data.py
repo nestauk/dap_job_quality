@@ -47,7 +47,7 @@ if __name__ == "__main__":
     logging.info(args)
 
     afs_raw_sample = pd.read_parquet(
-        "s3://open-jobs-lake/job_quality/early_years/evaluation_sample/job_ads_sample_size_16392.parquet"
+        "s3://open-jobs-lake/job_quality/early_years/evaluation_sample/job_ads_by_sector_region_sample_size_21392.parquet"
     )
     afs_ids = afs_raw_sample["id"].unique().tolist()
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         save_to_s3(
             BUCKET_NAME,
             temp_df,
-            f"job_quality/early_years/evaluation_sample/metadata_interim_production_{args.production}/job_ads_sample_size_16392_metadata_chunk_{i+args.start_index}.parquet",
+            f"job_quality/early_years/evaluation_sample/metadata_interim_production_{args.production}/job_ads_by_sector_region_sample_size_21392_metadata_chunk_{i+args.start_index}.parquet",
         )
 
     paths = get_s3_data_paths(
@@ -89,5 +89,5 @@ if __name__ == "__main__":
     save_to_s3(
         BUCKET_NAME,
         master_df,
-        f"job_quality/early_years/evaluation_sample/job_ads_sample_size_16392_metadata_production_{args.production}.parquet",
+        f"job_quality/early_years/evaluation_sample/job_ads_by_sector_region_sample_size_21392_metadata_production_{args.production}.parquet",
     )
