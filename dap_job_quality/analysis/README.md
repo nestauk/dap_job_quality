@@ -96,3 +96,7 @@ This will output
 | SENSE OF PURPOSE     | 0.000     | 0.000  | 0.000    | 4.0     |
 | SOCIAL               | 0.320     | 0.364  | 0.340    | 22.0    |
 | VOICE REPRESENTATION | 0.000     | 0.000  | 0.000    | 0.0     |
+
+## Chosing cosine similarity thresholds
+
+By extracting job quality measures with no cosine similarity threshold (i.e. the most similar job quality phrase is outputted regardless of how similar it actually is) we were able to investigate the affect of varying the thresholds on the precision and recall scores. We did this in a light touch way since the evaluation data isn't very big and we wanted to avoid over-fitting. The results of this analysis can be seen in the `dap_job_quality/notebooks/Evalution.ipynb` notebook - we found that certain job quality measures would produce a higher precision without effecting recall much with a higher threshold.
