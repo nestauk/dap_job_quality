@@ -32,13 +32,21 @@ For both the Distilbert and jobbert models, at the tokenisation stage, texts wer
 
 The performance of the best run (highest F1, evaluated on the validation set) from each of these hyperparameter sweeps is displayed in the table below.
 
-| | Accuracy| F1 | Precision | Recall |
-|----------|----------|----------|----------| ----------|
-| Logistic regression | 0.89 | 0.89 | 0.93 | 0.86 |
-| Distilbert | 0.91 | 0.91 | 0.92 | 0.90 |
-| Jobbert | 0.93 | 0.93 | 0.96 | 0.90 |
+|                     | Accuracy | F1   | Precision | Recall |
+| ------------------- | -------- | ---- | --------- | ------ |
+| Logistic regression | 0.89     | 0.89 | 0.93      | 0.86   |
+| Distilbert          | 0.91     | 0.91 | 0.92      | 0.90   |
+| Jobbert             | 0.93     | 0.93 | 0.96      | 0.90   |
 
-The best performance in terms of F1 was obtained from fine-tuning jobbert, and so the script `jobbert_train.py` fine-tunes jobbert with the best hyperparameters found in the sweep.
+The best performance in terms of F1 was obtained from fine-tuning jobbert, and so the script `jobbert_train.py` fine-tunes jobbert for up to 10 epochs with the best hyperparameters found in the sweep, and with an early stopping callback of 2.
+
+The final metrics on the training, validation and test datasets were:
+
+|            | Accuracy | F1   | Precision | Recall |
+| ---------- | -------- | ---- | --------- | ------ |
+| Train      | 0.81     | 0.82 | 0.91      | 0.74   |
+| Validation | 0.85     | 0.85 | 0.93      | 0.78   |
+| Test       | 0.83     | 0.85 | 0.92      | 0.80   |
 
 _Note that a weights and biases account is needed to run these scripts._
 
