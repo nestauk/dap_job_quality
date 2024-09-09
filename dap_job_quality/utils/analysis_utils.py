@@ -1,6 +1,8 @@
+from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import re
+from typing import List, Dict, Union, Optional, Set
 
 
 def create_wide_table(df):
@@ -16,20 +18,24 @@ def create_wide_table(df):
 
 
 def calculate_hourly_wage(
-    row, salary_unit_col="raw_salary_unit", hours_per_day=7.5, hours_per_year=37.5 * 52
-):
+    row: pd.Series,
+    salary_unit_col: str = "raw_salary_unit",
+    hours_per_day: float = 7.5,
+    hours_per_year: float = 37.5 * 52,
+) -> float:
     """Infer hourly pay.
 
     If the pay is given per hour, accept this amount. Otherwise if it is given per day, divide by hours per day,
     and if it is given per year, divide by the likely number of hours in a year.
 
     Args:
-        row (_type_): _description_
-        hours_per_day (float, optional): _description_. Defaults to 7.5.
-        hours_per_year (_type_, optional): _description_. Defaults to 37.5*52.
+        row (pd.Series): A row in a dataframe.
+        salary_unit_col (str): The name of the column that contains the salary unit (eg 'hour', 'day', 'year').
+        hours_per_day (float, optional): The number of working hours in a day. Defaults to 7.5.
+        hours_per_year (float, optional): The number of working hours in a year. Defaults to 37.5*52.
 
     Returns:
-        _type_: _description_
+        float: The calculated hourly wage or NaN if this cannot be calculated.
     """
     if row[salary_unit_col] == "hour":
         return row["raw_salary_float"]
@@ -41,8 +47,29 @@ def calculate_hourly_wage(
         return np.nan
 
 
-def extract_salary_info(text: str):
-    # Regular expression to match the salary pattern
+def extract_salary_info(text: str) -> List[Dict[str, Union[float, str, np.float64]]]:
+    """
+    Extracts salary information from the given text using regular expressions.
+
+    Regex to look for:
+    - minimum salary
+    - maximum salary (if provided)
+    - rate (e.g., 'hour', 'day', 'year')
+
+    The function looks for salary patterns like "£30,000 - £40,000 per year" or "£15 per hour"
+    and returns a list of dictionaries containing minimum salary, maximum salary, and the rate
+    (e.g., 'hour', 'day', 'year'). If the maximum salary is not provided, the minimum salary is used for both.
+
+    Args:
+        text (str): The text containing salary information.
+
+    Returns:
+        List[Dict[str, Union[float, str, np.float64]]]: A list of dictionaries, each containing:
+            - 'min_salary' (float): The minimum salary.
+            - 'max_salary' (float): The maximum salary.
+            - 'rate' (str or np.float64): The rate (e.g., 'hour', 'day', 'year'). If not provided, returns NaN.
+    """
+
     salary_pattern = re.compile(
         r"£\s*(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:-|to)?\s*£?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)?\s*(per\s*(hour|day|annum|year))?",
         re.IGNORECASE,
@@ -53,7 +80,9 @@ def extract_salary_info(text: str):
 
     for match in matches:
         min_salary = float(match[0].replace(",", ""))
+        # If the second group is empty, set the same value for both max and min
         max_salary = float(match[1].replace(",", "")) if match[1] else min_salary
+        # the second group is (per (day/hour/year)) so group 3 is the actual rate
         rate = match[3].lower() if match[3] else np.nan
 
         salary_info.append(
@@ -89,7 +118,7 @@ temporary_keywords = r"(contract will last from|temporary|fixed-term|fixed term|
 apprenticeship_keywords = r"apprentice"
 
 
-def classify_contract_type(sentence):
+def classify_contract_type(sentence: str):
     """
     Classifies the contract type based on keywords in the sentence.
     Returns 'Permanent' if permanent keywords are found,
@@ -110,7 +139,18 @@ def classify_contract_type(sentence):
 ### HOURS ###
 
 
-def match_hours_per_week(text):
+def match_hours_per_week(text: str) -> List[Dict[str, int]]:
+    """Extract hours per week from free text.
+
+    Looks for substrings that contain a number followed by 'hours', 'hrs', 'h', or 'hour' and
+    optionally followed by 'per week' or 'p/w'. Extracts the minimum and maximum hours if a range is provided.
+
+    Args:
+        text (str): Free text of a job description.
+
+    Returns:
+        List[Dict[str, int]]: List of dicts where each dict is a min and max hours.
+    """
 
     working_hours = []
 
@@ -149,8 +189,16 @@ def match_hours_per_week(text):
 # [match_hours_per_week(text) for text in hours_texts]
 
 
-def parse_time(time_str):
-    # Define time formats to match various input patterns
+def parse_time(time_str: str) -> Optional[datetime]:
+    """Parses a time string into a datetime object.
+
+    Args:
+        time_str (str): The string to be parsed.
+
+    Returns:
+        Optional[datetime]: The parsed datetime object or None if the parsing fails.
+    """
+
     time_formats = [
         "%I:%M%p",  # e.g., "8:30am"
         "%I.%M%p",  # e.g., "8.30am"
@@ -171,7 +219,26 @@ def parse_time(time_str):
     return None
 
 
-def extract_time_difference(text):
+def extract_time_difference(text: str) -> Optional[float]:
+    """
+    Extracts and calculates the time difference (in hours) from a given text containing time ranges.
+
+    This function uses regular expressions to find time ranges (e.g., "9:00 am - 5:00 pm" or "14:30 - 16:00")
+    and returns the difference in hours between the start and end times. If the end time is earlier than the
+    start time, it assumes the time range spans to the next day.
+
+    The main regex searches for:
+    - Start time: 1-2 digits followed by a colon or period, then 2 digits, and optionally followed by 'am' or 'pm'.
+    - A dash '-' separator
+    - End time: Same format as the start time.
+
+    Args:
+        text (str): The text containing the time range.
+
+    Returns:
+        Optional[float]: The time difference in hours as a float. If no valid time range is found, returns None.
+    """
+
     # Regex pattern to capture time ranges
     time_range_pattern = re.compile(
         r"(\d{1,2}[:\.]\d{2}|\d{1,2})(?:\s*[apAP][mM])?\s*-\s*(\d{1,2}[:\.]\d{2}|\d{1,2})(?:\s*[apAP][mM])?",
@@ -216,7 +283,20 @@ def extract_time_difference(text):
 #     print(f"'{text}' => {time_diff} hours")
 
 
-def count_working_days(text):
+def count_working_days(text: str) -> int:
+    """
+    Tries to figure out the number of working days in a week, based on the days mentioned in free text.
+
+    Uses regex plus a mapping of day names and their abbreviations to search for the pattern
+    <day name> - <day name> or individual day names eg "Mon, Tue, Wed".
+
+    Args:
+        text (str): The input text containing day names or ranges of days.
+
+    Returns:
+        int: The number of unique working days mentioned in the text.
+    """
+
     # Define day mappings to handle various abbreviations
     day_mappings = {
         "monday": 0,
@@ -244,18 +324,19 @@ def count_working_days(text):
         "sundays": 6,
     }
 
-    # Handle ranges like "Mon - Thurs"
+    # Handle ranges like "Mon - Thurs" "Monday to Thursday"
     range_pattern = re.compile(r"(\b\w+\b)\s*(-|to)\s*(\b\w+\b)", re.IGNORECASE)
     # Handle individual days or day lists like "Mondays, Tuesdays and Fridays"
     individual_days_pattern = re.compile(r"\b\w+\b", re.IGNORECASE)
 
-    days = set()
+    days: Set[int] = set()
 
     # Check for ranges
     if len(range_pattern.findall(text)) > 0:
-        # print(range_pattern.findall(text))
         for match in range_pattern.findall(text):
+            # match 0 will be the first day in the range
             start_day = day_mappings.get(match[0].lower())
+            # match 1 will be "to/-" so match 2 is the final day in the range
             end_day = day_mappings.get(match[2].lower())
 
             if start_day is not None and end_day is not None:
@@ -276,7 +357,6 @@ def count_working_days(text):
             if day_index is not None:
                 days.add(day_index)
 
-    # print(days)
     return len(days)
 
 
@@ -296,16 +376,47 @@ def count_working_days(text):
 #     print(f"'{text}' => {day_count} days")
 
 
-def check_full_time(text):
+def check_full_time(text: str) -> bool:
+    """
+    Checks if the given text contains the phrase "full time" or "full-time",
+    case insensitive.
+
+    Args:
+        text (str): The input text to check.
+
+    Returns:
+        bool: True if "full time" or "full-time" is found in the text,
+              False otherwise.
+    """
     return "full time" in text.lower() or "full-time" in text.lower()
 
 
-def calculate_hr_per_week_final(row):
-    """Before applying this function, you need to have already used the following functions to extract
-    the relevant info as follows:
-    - row['hours_per_week'] - created by match_hours_per_week()
-    - row['is_full_time'] - created by check_full_time()
-    - row['working_days'] - created by count_working_days()
+def calculate_hr_per_week_final(
+    row: pd.Series, full_time_hrs: float = 37.5, hrs_per_day: float = 7.5
+) -> Optional[float]:
+    """
+    Calculates the estimated hours per week based on the available information in the row.
+
+    Before using this function, the row must contain the following fields:
+    - 'hours_per_week': A list of dictionaries containing 'min_hours' and 'max_hours', created by `match_hours_per_week()`.
+    - 'is_full_time': A boolean indicating whether the job is full-time, created by `check_full_time()`.
+    - 'working_days': An integer indicating the number of working days, created by `count_working_days()`.
+
+    The calculation follows these rules:
+
+    1. If 'hours_per_week' is available, the function returns the 'min_hours' value from the first entry.
+    2. If 'is_full_time' is True, the function returns full_time_hrs.
+    3. If 'working_days' is available and greater than 0, the function returns 'working_days' * hrs_per_day.
+    4. If none of the above rules apply, the function returns None.
+
+    Args:
+        row (pd.Series): A row from a DataFrame containing job information, including
+                         'hours_per_week', 'is_full_time', and 'working_days'.
+        full_time_hrs (float, optional): The number of hours per week for a full-time job. Defaults to 37.5.
+        hrs_per_day (float, optional): The number of hours in a working day. Defaults to 7.5.
+
+    Returns:
+        Optional[float]: The estimated number of hours per week, or None if no information is available.
     """
     # Rule 1: Use 'hours_per_week' if available
     if row["hours_per_week"]:
@@ -315,10 +426,10 @@ def calculate_hr_per_week_final(row):
         ]  # or average, max, etc., depending on your requirement
     # Rule 2: Use 37.5 hours if 'is_full_time' is True
     elif row["is_full_time"]:
-        return 37.5  # or another standard full-time hours value
+        return full_time_hrs
     # Rule 3: Use 'working_days' multiplied by 7.5
     elif isinstance(row["working_days"], int) and row["working_days"] > 0:
-        return row["working_days"] * 7.5
-    # If none of the above rules apply, return None or 0
+        return row["working_days"] * hrs_per_day
+    # If none of the above rules apply, return None
     else:
         return None
