@@ -1,5 +1,6 @@
 from dap_job_quality.pipeline.find_job_quality import JobQuality
 from dap_job_quality.getters.keywords import get_keywords
+from dap_job_quality import PROJECT_DIR, get_yaml_config
 
 from sklearn.metrics import (
     accuracy_score,
@@ -15,11 +16,15 @@ from tqdm import tqdm
 from datetime import datetime
 from typing import Tuple
 
+jobbert_config = get_yaml_config(
+    PROJECT_DIR / "dap_job_quality/config/jobbert_config.yaml"
+)
+
 mapping_evaluation_dir = "s3://open-jobs-lake/job_quality/sentence_classifier/inputs/labelled/mapping_evaluation"
 
 evaluation_results_dir = "s3://open-jobs-lake/job_quality/outputs/evaluation"
 
-evaluation_file_name = "evaluation_data_12_08_24_per_sentence_evaluation_19_08_24.csv"
+evaluation_file_name = "evaluation_data_12_08_24_per_sentence_evaluation_28_08_24.csv"
 
 jq_cols = [
     "L&D",
@@ -73,7 +78,9 @@ def load_evaluation_data() -> pd.DataFrame:
 
 
 def predict_evaluation_data(
-    eval_data: pd.DataFrame, tp_to_subcategory: dict
+    eval_data: pd.DataFrame,
+    tp_to_subcategory: dict,
+    CS_THRESHOLD: dict = jobbert_config["cs_threshold"],
 ) -> Tuple[pd.DataFrame, dict]:
     """
     Predict JQ measures for the job adverts in the evaluation dataset
@@ -87,7 +94,7 @@ def predict_evaluation_data(
                     e.g. {job_id: [(ngram, cosine similarity, target phrase, subcategory), ...]}
     """
 
-    job_quality = JobQuality()
+    job_quality = JobQuality(CS_THRESHOLD=CS_THRESHOLD)
     job_quality.load()
 
     jq_predictions_df, _ = job_quality.extract_job_quality(
@@ -222,50 +229,68 @@ if __name__ == "__main__":
 
     eval_data = load_evaluation_data()
 
-    # Predict JQ measures per job advert
-    jq_predictions_per_id, pred_ngrams_per_id = predict_evaluation_data(
-        eval_data, tp_to_subcategory
-    )
-
-    # Get the true JQ measures per job advert
-    jq_truth_per_id = eval_data.groupby("id")[jq_cols].sum().reset_index()
-
-    # Evaluate truth vs predictions
-
-    # Merge true and predicted counts together and binarise (JQ present or not)
-    comparison_counts = jq_truth_per_id.merge(
-        jq_predictions_per_id, on="id", how="left"
-    ).fillna(value=0)
-    comparison_df = comparison_counts != 0
-    comparison_df["id"] = comparison_counts["id"]
-
-    # Get classification report for each JQ measure
-    class_rep_per_jq = {}
-    for jq_measure in jq_cols:
-        if f"prediction_{jq_measure}" in comparison_df:
-            pred_list = comparison_df[f"prediction_{jq_measure}"]
+    for use_thresholds in [True, False]:
+        # Predict JQ measures per job advert
+        if use_thresholds:
+            # Use default cosine similarity thresholds
+            jq_predictions_per_id, pred_ngrams_per_id = predict_evaluation_data(
+                eval_data,
+                tp_to_subcategory,
+            )
         else:
-            pred_list = [False] * len(comparison_df)
-        class_rep = classification_report(
-            comparison_df[jq_measure], pred_list, output_dict=True
+            # Output top match regardless of threshold
+            jq_predictions_per_id, pred_ngrams_per_id = predict_evaluation_data(
+                eval_data, tp_to_subcategory, CS_THRESHOLD={"OTHER": 0}
+            )
+
+        # Get the true JQ measures per job advert
+        jq_truth_per_id = eval_data.groupby("id")[jq_cols].sum().reset_index()
+
+        # Evaluate truth vs predictions
+
+        # Merge true and predicted counts together and binarise (JQ present or not)
+        comparison_counts = jq_truth_per_id.merge(
+            jq_predictions_per_id, on="id", how="left"
+        ).fillna(value=0)
+        comparison_df = comparison_counts != 0
+        comparison_df["id"] = comparison_counts["id"]
+
+        # Get classification report for each JQ measure
+        class_rep_per_jq = {}
+        for jq_measure in jq_cols:
+            if f"prediction_{jq_measure}" in comparison_df:
+                pred_list = comparison_df[f"prediction_{jq_measure}"]
+            else:
+                pred_list = [False] * len(comparison_df)
+            class_rep = classification_report(
+                comparison_df[jq_measure], pred_list, output_dict=True
+            )
+            class_rep_per_jq[jq_measure] = class_rep
+
+        eval_results_df = pd.DataFrame(class_rep_per_jq).T.reset_index(
+            names="JQ_measure_name"
         )
-        class_rep_per_jq[jq_measure] = class_rep
 
-    eval_results_df = pd.DataFrame(class_rep_per_jq).T.reset_index(
-        names="JQ_measure_name"
-    )
+        jq_error_analysis_df = format_to_explore_errors_data(
+            comparison_df, eval_data, pred_ngrams_per_id
+        )
 
-    jq_error_analysis_df = format_to_explore_errors_data(
-        comparison_df, eval_data, pred_ngrams_per_id
-    )
+        # Save results
+        TODAY = datetime.today().strftime("%Y-%m-%d")
 
-    # Save results
-    TODAY = datetime.today().strftime("%Y-%m-%d")
+        if use_thresholds:
+            eval_results_df.to_csv(
+                f"{evaluation_results_dir}/JQ_evaluation_results_{TODAY}_diff_thresholds.csv"
+            )
 
-    eval_results_df.to_csv(
-        f"{evaluation_results_dir}/JQ_evaluation_results_{TODAY}_diff_thresholds.csv"
-    )
+            jq_error_analysis_df.to_csv(
+                f"{evaluation_results_dir}/JQ_prediction_errors_{TODAY}_diff_thresholds.csv"
+            )
+        else:
+            eval_results_df.to_csv(
+                f"{evaluation_results_dir}/JQ_evaluation_results_{TODAY}_no_thresh.csv"
+            )
 
-    jq_error_analysis_df.to_csv(
-        f"{evaluation_results_dir}/JQ_prediction_errors_{TODAY}_diff_thresholds.csv"
-    )
+            jq_error_analysis_df.to_csv(
+                f"{evaluation_results_dir}/JQ_prediction_errors_{TODAY}_no_thresh.csv"
+            )

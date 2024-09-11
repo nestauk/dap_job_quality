@@ -43,14 +43,14 @@ This will run the evaluation on the manually labelled 100 job adverts. The numbe
 
 | JQ measure           | Number of job adverts |
 | -------------------- | --------------------- |
-| L&D                  | 48                    |
-| CAREER               | 25                    |
+| L&D                  | 52                    |
+| CAREER               | 22                    |
 | HOURS                | 59                    |
-| FLEX_HOURS           | 35                    |
-| SHIFT                | 17                    |
-| LOC                  | 36                    |
-| FLEX_LOC             | 28                    |
-| CONTRACT             | 39                    |
+| FLEX_HOURS           | 36                    |
+| SHIFT                | 19                    |
+| LOC                  | 53                    |
+| FLEX_LOC             | 20                    |
+| CONTRACT             | 40                    |
 | LEAVE                | 30                    |
 | COMP                 | 86                    |
 | PERKS                | 55                    |
@@ -68,30 +68,35 @@ This will run the evaluation on the manually labelled 100 job adverts. The numbe
 
 This will output
 
-1. the JQ predictions and truth for each job advert in the evaluation data (`s3://open-jobs-lake/job_quality/outputs/evaluation/JQ_prediction_errors_{DATE}.csv`)
-2. the evaluation results for each job quality level and job quality measure within this level (`s3://open-jobs-lake/job_quality/outputs/evaluation/JQ_evaluation_results_{DATE}.csv`)
+1. the JQ predictions and truth for each job advert in the evaluation data (`s3://open-jobs-lake/job_quality/outputs/evaluation/JQ_prediction_errors_{DATE}_diff_thresholds.csv`)
+2. the evaluation results for each job quality level and job quality measure within this level (`s3://open-jobs-lake/job_quality/outputs/evaluation/JQ_evaluation_results_{DATE}_diff_thresholds.csv`)
+3. These files, but calculated when no cosine similarity threshold was used (output files have a `no_thresh` suffix).
 
-| precision            | recall | f1-score | support | support |
-| -------------------- | ------ | -------- | ------- | ------- |
-| L&D                  | 0.875  | 0.875    | 0.875   | 48.0    |
-| CAREER               | 0.900  | 0.720    | 0.800   | 25.0    |
-| HOURS                | 0.906  | 0.983    | 0.943   | 59.0    |
-| FLEX_HOURS           | 0.732  | 0.857    | 0.789   | 35.0    |
-| SHIFT                | 0.714  | 0.294    | 0.417   | 17.0    |
-| LOC                  | 0.615  | 0.211    | 0.314   | 38.0    |
-| FLEX_LOC             | 0.842  | 0.800    | 0.821   | 20.0    |
-| CONTRACT             | 0.757  | 0.718    | 0.737   | 39.0    |
-| LEAVE                | 0.853  | 0.967    | 0.906   | 30.0    |
-| COMP                 | 1.000  | 0.860    | 0.925   | 86.0    |
-| PERKS                | 0.883  | 0.964    | 0.922   | 55.0    |
-| CARING               | 0.381  | 1.000    | 0.552   | 8.0     |
-| DISABILITY           | 0.000  | 0.000    | 0.000   | 2.0     |
-| HEALTH               | 0.545  | 0.857    | 0.667   | 7.0     |
-| M_HEALTH             | 0.400  | 0.500    | 0.444   | 4.0     |
-| SPONSORSHIP          | 1.000  | 1.000    | 1.000   | 2.0     |
-| REWARD               | 0.000  | 0.000    | 0.000   | 3.0     |
-| MISC                 | 0.300  | 0.231    | 0.261   | 13.0    |
-| AUTONOMY             | 0.500  | 1.000    | 0.667   | 1.0     |
-| SENSE OF PURPOSE     | 0.000  | 0.000    | 0.000   | 4.0     |
-| SOCIAL               | 0.320  | 0.364    | 0.340   | 22.0    |
-| VOICE REPRESENTATION | 0.000  | 0.000    | 0.000   | 0.0     |
+| Job quality measure  | precision | recall | f1-score | support |
+| -------------------- | --------- | ------ | -------- | ------- |
+| L&D                  | 0.917     | 0.846  | 0.880    | 52.0    |
+| CAREER               | 0.900     | 0.818  | 0.857    | 22.0    |
+| HOURS                | 0.906     | 0.983  | 0.943    | 59.0    |
+| FLEX_HOURS           | 0.756     | 0.861  | 0.805    | 36.0    |
+| SHIFT                | 1.000     | 0.368  | 0.538    | 19.0    |
+| LOC                  | 0.846     | 0.208  | 0.333    | 53.0    |
+| FLEX_LOC             | 0.842     | 0.800  | 0.821    | 20.0    |
+| CONTRACT             | 0.757     | 0.700  | 0.727    | 40.0    |
+| LEAVE                | 0.853     | 0.967  | 0.906    | 30.0    |
+| COMP                 | 1.000     | 0.860  | 0.925    | 86.0    |
+| PERKS                | 0.883     | 0.964  | 0.922    | 55.0    |
+| CARING               | 0.381     | 1.000  | 0.552    | 8.0     |
+| DISABILITY           | 0.000     | 0.000  | 0.000    | 2.0     |
+| HEALTH               | 0.545     | 0.857  | 0.667    | 7.0     |
+| M_HEALTH             | 0.400     | 0.500  | 0.444    | 4.0     |
+| SPONSORSHIP          | 1.000     | 1.000  | 1.000    | 2.0     |
+| REWARD               | 0.000     | 0.000  | 0.000    | 3.0     |
+| MISC                 | 0.300     | 0.231  | 0.261    | 13.0    |
+| AUTONOMY             | 0.500     | 1.000  | 0.667    | 1.0     |
+| SENSE OF PURPOSE     | 0.000     | 0.000  | 0.000    | 4.0     |
+| SOCIAL               | 0.320     | 0.364  | 0.340    | 22.0    |
+| VOICE REPRESENTATION | 0.000     | 0.000  | 0.000    | 0.0     |
+
+## Chosing cosine similarity thresholds
+
+By extracting job quality measures with no cosine similarity threshold (i.e. the most similar job quality phrase is outputted regardless of how similar it actually is) we were able to investigate the affect of varying the thresholds on the precision and recall scores. We did this in a light touch way since the evaluation data isn't very big and we wanted to avoid over-fitting. The results of this analysis can be seen in the `dap_job_quality/notebooks/Evalution.ipynb` notebook - we found that certain job quality measures would produce a higher precision without effecting recall much with a higher threshold.
