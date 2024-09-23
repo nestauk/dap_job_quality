@@ -63,6 +63,8 @@ jobbert_config = get_yaml_config(
     PROJECT_DIR / "dap_job_quality/config/jobbert_config.yaml"
 )
 
+print(jobbert_config)
+
 
 def split_ngrams(
     text: str, length: int = 6, n: int = 4
