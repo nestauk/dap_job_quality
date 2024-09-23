@@ -1,4 +1,5 @@
 """dap_job_quality."""
+
 from pathlib import Path
 from setuptools import find_packages
 from setuptools import setup
@@ -19,6 +20,10 @@ setup(
     install_requires=read_lines(BASE_DIR / "requirements.txt"),
     extras_require={"dev": read_lines(BASE_DIR / "requirements_dev.txt")},
     packages=find_packages(exclude=["docs"]),
+    include_package_data=True,  # Ensure this is set to include non-Python files
+    package_data={
+        "dap_job_quality": ["config/jobbert_config.yaml"],  # Include the config file
+    },
     version="0.1.0",
     description="extracting dimensions of job quality form job ads",
     author="Nesta",
