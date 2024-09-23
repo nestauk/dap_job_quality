@@ -20,9 +20,9 @@ setup(
     install_requires=read_lines(BASE_DIR / "requirements.txt"),
     extras_require={"dev": read_lines(BASE_DIR / "requirements_dev.txt")},
     packages=find_packages(exclude=["docs"]),
-    include_package_data=True,  # Ensure this is set to include non-Python files
+    include_package_data=True,
     package_data={
-        "dap_job_quality": ["config/jobbert_config.yaml"],  # Include the config file
+        "dap_job_quality": [BASE_DIR / "dap_job_quality/config/jobbert_config.yaml"],
     },
     version="0.1.0",
     description="extracting dimensions of job quality form job ads",
