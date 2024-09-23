@@ -1,6 +1,14 @@
-# dap_job_quality
+# Job Quality Extractor
 
-## Setup
+This project is about extracting dimensions of job quality from job adverts.
+
+## Usage
+
+To install the package ...
+
+To extract dimensions of job quality from a single job advert or from a list of job adverts ...
+
+## Developer setup
 
 - Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter/quickstart), in brief:
   - Install: `direnv` and `conda`
