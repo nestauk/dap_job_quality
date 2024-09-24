@@ -1,0 +1,40 @@
+site_name: Nesta Job Quality Extractor
+site_description: Identifying drivers of job quality in online job adverts.
+site_url: https://nestauk.github.io/dap_job_quality
+repo_name: nestauk/dap_job_quality
+repo_url: https://github.com/nestauk/dap_job_quality
+extra:
+  homepage: https://nestauk.github.io/dap_job_quality
+docs_dir: .
+extra_css:
+  - docs/style.css
+theme:
+  name: material
+  logo: img/favicon.ico
+  favicon: img/favicon.ico
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+  font:
+    text: Century Gothic
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: amber
+      accent: pink
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+nav:
+  - Home: docs/index.md
+plugins:
+  - same-dir
