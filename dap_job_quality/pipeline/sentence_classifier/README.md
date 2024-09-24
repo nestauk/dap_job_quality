@@ -2,7 +2,7 @@
 
 ## Data preparation
 
-The scripts in `training_data/` contain the code that we used to prepare and augment the labelled data we had for the sentence classifier. The different manual and automated steps that we took to prepare the data are as follows:
+The scripts in [`training_data/`](https://github.com/nestauk/dap_job_quality/tree/dev/dap_job_quality/pipeline/sentence_classifier/training_data) contain the code that we used to prepare and augment the labelled data we had for the sentence classifier. The different manual and automated steps that we took to prepare the data are as follows:
 
 1. `01_concat_data.py`: This script concatenates different batches of labelled data.
 2. As the data above was only labelled binarily (related to job quality/not related to job quality), we then manually labelled these sentences for job quality category [here](https://docs.google.com/spreadsheets/d/1bXNmO9vOLG6zdDpHl0Tdw9AeDqb43CrpkXzNGyHRhWI/edit?gid=4769099#gid=4769099).
@@ -22,13 +22,13 @@ In the end, the training, validation and test sets were balanced as follows:
 
 We ran hyperparameter sweeps for the following types of model:
 
-- `classifier_sweep.py`: a logistic regression model, with the input features being the embeddings of the sentences. The hyperparameter sweep considers all-miniLM-l6-v2 sentence embeddings vs. embeddings generated from jobbert.
+- `classifier_sweep.py`: a logistic regression model, with the input features being the embeddings of the sentences. The dimensionality is reduced from 384 dimensions using PCA. The hyperparameter sweep considers [all-miniLM-l6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) sentence embeddings vs. embeddings generated from [jobbert](https://huggingface.co/jjzha/jobbert-base-cased).
 - `distilbert_sweep.py`: this sweep fine-tunes a distilbert model for 1 epoch.
 - `jobbert_sweep.py`: this sweep fine-tunes a jobbert model for 1 epoch.
 
 For each sweep, a random search of the hyperparameters was conducted over 30 runs.
 
-For both the Distilbert and jobbert models, at the tokenisation stage, texts were truncated or padded to 128 tokens. This limit was chosen because exploratory data analysis showed that the vast majority of sentences from the training data were fewer than 100 tokens long (99th percentile - 81 tokens).
+For both the Distilbert and jobbert models, at the tokenisation stage, texts were truncated or padded to 128 tokens. This limit was chosen because exploratory data analysis showed that the vast majority of sentences from the training data were fewer than 100 tokens long (an examination of the distribution of token lengths showed that the 99th percentile was 81 tokens).
 
 The performance of the best run (highest F1, evaluated on the validation set) from each of these hyperparameter sweeps is displayed in the table below.
 
@@ -54,4 +54,6 @@ _Note that a weights and biases account is needed to run these scripts._
 
 To make predictions using the classifier on a random sample of OJO job adverts run:
 
+```
 python dap_job_quality/pipeline/sentence_classifier/jobbert_inference.py --n_samples=1000
+```
