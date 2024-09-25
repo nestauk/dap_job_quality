@@ -37,7 +37,7 @@ To extract dimensions of job quality from a single job advert or from a list of 
 
 Example usage:
 
-```
+```python
 from dap_job_quality.pipeline.find_job_quality import JobQuality
 import pandas as pd
 
@@ -72,7 +72,7 @@ The output dataframe `jq_df_filtered` should look like this:
 
 Meanwhile, the more concise output, `job_id_to_target_phrase`, should look like this:
 
-```
+```python
 {
     123: ['Cycle to work', 'benefits', 'pension', 'pension scheme'],
     234: ['childcare vouchers', 'compensation', 'performance bonus']
@@ -84,6 +84,6 @@ Meanwhile, the more concise output, `job_id_to_target_phrase`, should look like 
 The pipeline comprises 4 basic steps:
 
 1. Clean the text minimally, then separate the advert into sentences
-2. Classify the sentences as either relating to job quality (eg "We are a friendly supportive team") or not relating to job quality (eg "You must have a friendly supportive demeanour").
+2. Classify the sentences as either relating to job quality (eg "We are a friendly supportive team") or not relating to job quality (eg "You must have a friendly supportive demeanour"). More detail on the classifier [here](./classifier.md) and in the [README](./pipeline/sentence_classifier/README.md).
 3. Chunk up the sentences
-4. Match the sentence chunks to the taxonomy (more detail on steps 3 and 4 [here])
+4. Match the sentence chunks to the taxonomy (more detail on steps 3 and 4 [here](./taxonomy_mapping.md))
