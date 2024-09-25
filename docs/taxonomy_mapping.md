@@ -8,6 +8,8 @@ We conducted an initial analysis to assess (a) which, if any, dimensions of job 
 - Sub-categories within that which were taken from the [CIPD Good Work Index 2023](https://www.cipd.org/globalassets/media/knowledge/knowledge-hub/reports/2023-pdfs/2023-good-work-index-report-8407.pdf) and [Measuring Good Work](https://d1ssu070pg2v9i.cloudfront.net/pex/pex_carnegie2021/2018/09/06105222/Measuring-Good-Work-FINAL-03-09-18.pdf), eg “career progression”, “learning and development”, “sense of purpose”
 - The most common phrases that we saw in job adverts that related to these sub-categories. For example, for the sub-category “learning and development”, we included the phrases “CPD” (Continuous Professional Development), “learning and development”, “training”.
 
+This means that not all of the CIPD's dimensions and subdimensions of job quality are in our taxonomy, because some do not appear or cannot be inferred from job adverts. For example, trade union existence and activity is not something that is typically mentioned in job adverts. Similarly, the subdimension "use of skills" refers to whether an employee is in employment that makes use of their specific skillset, so it is dependent on the individual and cannot be inferred from the job advert.
+
 You can find the final taxonomy [here](https://open-jobs-lake.s3.eu-west-1.amazonaws.com/job_quality/keywords/keyword_lookup+-+v8.csv).
 
 ## Using a different taxonomy
