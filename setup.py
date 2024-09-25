@@ -1,4 +1,5 @@
 """dap_job_quality."""
+
 from pathlib import Path
 from setuptools import find_packages
 from setuptools import setup
@@ -19,6 +20,11 @@ setup(
     install_requires=read_lines(BASE_DIR / "requirements.txt"),
     extras_require={"dev": read_lines(BASE_DIR / "requirements_dev.txt")},
     packages=find_packages(exclude=["docs"]),
+    package_data={  # If any package contains *.yaml files, include them:
+        "": [
+            "*.yaml",
+        ]
+    },
     version="0.1.0",
     description="extracting dimensions of job quality form job ads",
     author="Nesta",
