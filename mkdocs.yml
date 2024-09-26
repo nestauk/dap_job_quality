@@ -8,6 +8,8 @@ extra:
 docs_dir: .
 extra_css:
   - docs/style.css
+markdown_extensions:
+  - tables
 theme:
   name: material
   logo: docs/img/favicon.ico
