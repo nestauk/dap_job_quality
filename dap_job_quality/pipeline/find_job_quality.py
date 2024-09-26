@@ -191,12 +191,10 @@ class JobQuality(object):
 
     def __init__(
         self,
-        JQ_THRESHOLD: float = jobbert_config["jq_threshold"],
         CS_THRESHOLD: float = jobbert_config["cs_threshold"],
         batch_size: int = jobbert_config["train_config"]["per_device_train_batch_size"],
         MAX_LENGTH: int = jobbert_config["max_length"],
     ):
-        self.JQ_THRESHOLD = JQ_THRESHOLD
         self.CS_THRESHOLD = CS_THRESHOLD
         self.batch_size = batch_size
         self.MAX_LENGTH = MAX_LENGTH
@@ -213,17 +211,10 @@ class JobQuality(object):
         nltk.download("punkt")
         nltk.download("stopwords")
 
-        # The sentence embedding model to use for encoding the sentences for the sentence classifier.
-        #  not used
-        # self.sentence_classifier_bert_transformer = SentenceTransformer(
-        #     "jjzha/jobbert-base-cased", device=self.device
-        # )
-
         # The sentence embedding model to use for encoding the n-grams and target phrases.
         self.ngram_match_bert_transformer = SentenceTransformer(
             "all-MiniLM-L6-v2", device=self.device
         )
-        # self.ngram_match_bert_transformer.max_seq_length = self.MAX_LENGTH #I don't think this part needs truncation
 
         sentence_classifier_model, sentence_classifier_tokenizer = get_jobbert_jq(
             max_length=self.MAX_LENGTH
@@ -327,12 +318,7 @@ class JobQuality(object):
         jobs_df["job_quality_label"] = labels
         jobs_df["job_quality_prob"] = pred_scores
 
-        job_quality_df = jobs_df[
-            (
-                (jobs_df["job_quality_label"] == "LABEL_1")
-                & (jobs_df["job_quality_prob"] >= self.JQ_THRESHOLD)
-            )
-        ]
+        job_quality_df = jobs_df[(jobs_df["job_quality_label"] == "LABEL_1")]
 
         return job_quality_df.reset_index(drop=True)
 

@@ -1,7 +1,6 @@
 model: jjzha/jobbert-base-cased
 max_length: 128
 seed: 42
-jq_threshold: 0.3
 cs_threshold:
   CAREER: 0.6
   FLEX_HOURS: 0.65
