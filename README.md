@@ -19,7 +19,7 @@ We took as our starting point [CIPD's seven dimensions of job quality](https://w
 7. health and wellbeing
 
 We also added an additional category, ‘barriers to access’, to our taxonomy, so that dimensions of job quality that directly impact marginalised groups might be gathered together. We made one further addition, “atmosphere, culture and environment”, which fits under “Social support and cohesion” and which we took from Sleeman 2024.
-
+Our taxonomy of job quality can be seen [here](https://docs.google.com/spreadsheets/d/1ORiJDeNWvhcEMSG6i-rfatzpbJzFq0uo6XHbny6xxsE/edit?gid=0#gid=0).
 ## Installation
 
 To install the package, run
