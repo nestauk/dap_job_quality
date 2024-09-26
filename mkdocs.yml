@@ -10,8 +10,8 @@ extra_css:
   - docs/style.css
 theme:
   name: material
-  logo: img/favicon.ico
-  favicon: img/favicon.ico
+  logo: docs/img/favicon.ico
+  favicon: docs/img/favicon.ico
   features:
     - navigation.instant
     - navigation.tracking
