@@ -48,3 +48,45 @@ You can read more about the evaluation process [here](https://github.com/nestauk
 ## Data
 
 We were only able to label a relatively small number of job adverts due to the time-consuming nature of this process (the training, validation and test sets for the binary classifier comprise [478 job adverts](https://open-jobs-lake.s3.eu-west-1.amazonaws.com/job_quality/sentence_classifier/inputs/labelled/train_val_test_20240725.csv) while the mapping was evaluated against [152 adverts](https://open-jobs-lake.s3.eu-west-1.amazonaws.com/job_quality/outputs/evaluation/evaluation_data_12_08_24_per_sentence_evaluation_28_08_24.csv)). This means that the classifier is trained on a small number of job adverts and evaluated on even fewer, and similarly the end-to-end evaluation is based on fewer than 100 adverts per job quality dimension. These samples will not be representative of the full spectrum of occupations available in the UK labour market so there is a risk that the approach will not generalise well to some of these "unseen" occupations.
+
+Across these two datasets, the representation of sectors is as follows (sector is as listed on the job site):
+
+| Sector                          | Number of unique adverts |
+| :------------------------------ | -----------------------: |
+| Education                       |                       56 |
+| Retail                          |                       50 |
+| Health & Medicine               |                       39 |
+| Social Care                     |                       39 |
+| Transport & Logistics           |                       36 |
+| Hospitality & Catering          |                       33 |
+| Human Resources                 |                       32 |
+| IT & Telecoms                   |                       28 |
+| Admin, Secretarial & PA         |                       22 |
+| Engineering                     |                       20 |
+| Construction & Property         |                       20 |
+| Sales                           |                       20 |
+| Accountancy                     |                       17 |
+| Marketing & PR                  |                       15 |
+| Charity & Voluntary             |                       14 |
+| Financial Services              |                       13 |
+| Manufacturing                   |                       13 |
+| Customer Service                |                       12 |
+| Accountancy (Qualified)         |                       11 |
+| Estate Agency                   |                        8 |
+| Legal                           |                        7 |
+| Other                           |                        7 |
+| Recruitment Consultancy         |                        6 |
+| FMCG                            |                        5 |
+| Strategy & Consultancy          |                        5 |
+| Training                        |                        5 |
+| Media, Digital & Creative       |                        4 |
+| Scientific                      |                        3 |
+| Motoring & Automotive           |                        3 |
+| Banking                         |                        2 |
+| Energy                          |                        2 |
+| Leisure & Tourism               |                        2 |
+| Graduate Training & Internships |                        2 |
+| General Insurance               |                        2 |
+| Purchasing                      |                        2 |
+| Apprenticeships                 |                        2 |
+| Security & Safety               |                        1 |
