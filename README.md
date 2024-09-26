@@ -8,8 +8,6 @@ Here, we provide a method for identifying dimensions of job quality in online jo
 
 ## What dimensions of job quality do you extract?
 
-The term "job quality" refers to aspects of a job that affect worker wellbeing - for example how much the job is paid, and whether the contract is permanent. Most research on job quality rightly focuses on data from the employee's point of view, using surveys or interviews or, recently, [online reviews](https://www.escoe.ac.uk/publications/extracting-dimensions-of-job-quality-from-online-employee-reviews/).
-
 We took as our starting point [CIPD's seven dimensions of job quality](https://www.cipd.org/globalassets/media/knowledge/knowledge-hub/reports/2023-pdfs/2023-good-work-index-report-8407.pdf):
 
 1. pay and benefits
