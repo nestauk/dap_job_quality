@@ -38,7 +38,8 @@ theme:
         name: Switch to light mode
 nav:
   - Home: docs/index.md
-  - Classifier: docs/classifier.md
-  - Taxonomy: docs/taxonomy_mapping.md
+  - Sentence classifier: docs/classifier.md
+  - Mapping to the taxonomy: docs/taxonomy_mapping.md
+  - Limitations and next steps: docs/limitations.md
 plugins:
   - same-dir

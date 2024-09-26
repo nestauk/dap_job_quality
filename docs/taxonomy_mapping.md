@@ -10,7 +10,53 @@ We conducted an initial analysis to assess (a) which, if any, dimensions of job 
 
 This means that not all of the CIPD's dimensions and subdimensions of job quality are in our taxonomy, because some do not appear or cannot be inferred from job adverts. For example, trade union existence and activity is not something that is typically mentioned in job adverts. Similarly, the subdimension "use of skills" refers to whether an employee is in employment that makes use of their specific skillset, so it is dependent on the individual and cannot be inferred from the job advert.
 
-You can find the final taxonomy [here](https://open-jobs-lake.s3.eu-west-1.amazonaws.com/job_quality/keywords/keyword_lookup+-+v8.csv).
+You can find the final taxonomy [here](https://open-jobs-lake.s3.eu-west-1.amazonaws.com/job_quality/keywords/keyword_lookup+-+v8.csv). In summary, the dimensions we seek to capture are:
+
+- CAREER: falling under _Job design and nature of work_, this category is about opportunities for career progression and advancement.
+
+- COMP: falling under _Pay and benefits_, this category is about the salary and other financial benefits such as pension, bonus etc.
+
+- CONTRACT: falling under _Terms of employment_, this category is about the type of contract offered, eg permanent, temporary, fixed-term, zero-hours.
+
+- FLEX*HOURS: falling under \_Work-life balance*, this includes any references to flexible hours, job-share, and other flexible working arrangements. Note that "part-time" is included separately in the HOURS category.
+
+- FLEX*LOC: falling under \_Work-life balance*, this includes any references to remote working, hybrid working, or other flexible location arrangements.
+
+- HEALTH: falling under _Health, safety and psycho-social wellbeing_, we included any references to sick pay or private healthcare under this category.
+
+- HOURS: falling under _Terms of employment_, this category is intended to pick up any reference to the number of contracted hours.
+
+- L&D: falling under _Job design and nature of work_, this category is about learning and development opportunities, such as training, CPD, or qualifications.
+
+- LEAVE: falling under _Pay and benefits_, this category is about annual leave. We have included sick leave and parental leave under other categories.
+
+- LOC: falling under _Terms of employment_, this category is about the location of the job, eg city, region, or country.
+
+- PERKS: falling under _Pay and benefits_, this category is about non-financial benefits, such as cycle to work schemes, gym memberships, shopping vouchers and so on.
+
+- SHIFT: falling under _Terms of employment_, this category is about shift patterns, eg night shifts, weekend shifts, or rotating shifts.
+
+Categories that we attempted to extract but that we do not recommend for others to use are (see further [our evaluation of the pipeline](https://github.com/nestauk/dap_job_quality/tree/dev/dap_job_quality/analysis)):
+
+- AUTONOMY: falling under _Job design and nature of work_, this category is about the extent to which employees have control over their work. Only 1 example was found in the evaluation sample.
+
+- CARING: falling under the dimension we have called _Barriers to access_, this category is intended to capture anything related to caring duties, such as parental leave, carers' leave, or whether the role is term-time only (but note there are separate flexible working categories as well, FLEX_HOURS and FLEX_LOC). Only 8 positive examples were found in the evaluation sample.
+
+- DISABILITY: falling under _Barriers to access_, this category was intended to be about whether the job is suitable for people with disabilities. In practice, we found that many job adverts contain boilerplate text about being an equal opportunities employer; we labelled such text as NOT relating to disability on the rationale that absence of discrimination is not the same as positive behaviour in terms of hiring disabled candidates. In contrast, we labelled text that indicates that an employer is disability positive as being related to this category. Despite our attempts to label text in this way, there is still a risk of false positives for this category. Only 2 positive examples were found in the evaluation sample.
+
+- M*HEALTH: falling under \_Health, safety and psycho-social wellbeing*, this category is about mental health support. Only 4 positive examples were found in the evaluation sample.
+
+- MISC: this was intended as a "catch-all" category and in practice contains a mix of different types of information. Only 13 positive examples were found in the evaluation sample.
+
+- REWARD: falling under _Job design and nature of work_, this category is about non-monetary reward. Only 3 positive examples were found in the evaluation sample. In practice we expect this category to produce false positives because of the common use of the word "reward" in job adverts to mean salary and financial compensation.
+
+- SOCIAL: this falls under the dimension _Social support and cohesion_. The performance of this category was poor in the evaluation. Only 22 positive examples were found in the evaluation sample.
+
+- SPONSORSHIP: this refers to offers of visa sponsorship and falls under _Pay and benefits_. Only 2 positive examples were found in the evaluation sample. We expect this category to be difficult to extract without further parsing because of the prevalence of near-matches such as "We cannot offer visa sponsorship" in job advert text.
+
+- VOICE REPRESENTATION. No positive examples were found in the evaluation sample.
+
+With more data, performance on these latter categories could potentially be improved. See further [here](./limitations.md).
 
 ## Using a different taxonomy
 
