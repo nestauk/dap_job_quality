@@ -44,9 +44,9 @@ The final metrics on the training, validation and test datasets were:
 
 |            | Accuracy | F1   | Precision | Recall |
 | ---------- | -------- | ---- | --------- | ------ |
-| Train      | 0.81     | 0.82 | 0.91      | 0.74   |
-| Validation | 0.85     | 0.85 | 0.93      | 0.78   |
-| Test       | 0.83     | 0.85 | 0.92      | 0.80   |
+| Train      | 0.90     | 0.90 | 0.91      | 0.90   |
+| Validation | 0.91     | 0.91 | 0.95      | 0.87   |
+| Test       | 0.88     | 0.89 | 0.87      | 0.91   |
 
 _Note that a weights and biases account is needed to run these scripts._
 
