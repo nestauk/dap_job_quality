@@ -36,5 +36,7 @@ theme:
         name: Switch to light mode
 nav:
   - Home: docs/index.md
+  - Taxonomy: docs/taxonomy_mapping.md
+  - Classifier: docs/classifier.md
 plugins:
   - same-dir
