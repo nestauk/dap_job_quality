@@ -61,7 +61,7 @@ jq_df_filtered, job_id_to_target_phrase = job_quality.extract_job_quality(
 
 The output dataframe `jq_df_filtered` should look like this:
 | id | description | clean_description | job_quality_label | sentences_split | ngrams | target_phrase | cosine_similarity | subcategory |
-|-----|----------------------------------------------------------|-----------------------------------------------------------|-------------------|--------------------------------------------------------------|-----------------------------|-------------------|-------------------|------------|
+|-----|-------|-----------|----------|-------|--------|--------|---------|----------|
 | 123 | [This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | a cycle to work | Cycle to work | 0.965111 | PERKS |
 | 123 | [This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | many benefits such as | benefits | 0.874949 | PERKS |
 | 123 | [This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | such as a pension | pension | 0.821573 | COMP |
