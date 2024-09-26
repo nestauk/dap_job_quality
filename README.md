@@ -86,7 +86,7 @@ The pipeline comprises 4 basic steps:
 1. Clean the text minimally, then separate the advert into sentences
 2. Classify the sentences as either relating to job quality (eg "We are a friendly supportive team") or not relating to job quality (eg "You must have a friendly supportive demeanour")
 3. Chunk up the sentences
-4. Match the sentence chunks to the taxonomy
+4. Match the sentence chunks to [the taxonomy](Our taxonomy of job quality can be seen [here](https://docs.google.com/spreadsheets/d/1ORiJDeNWvhcEMSG6i-rfatzpbJzFq0uo6XHbny6xxsE/edit?gid=0#gid=0).)
 
 You can find more detail on these steps in [the documentation](https://nestauk.github.io/dap_job_quality/).
 
