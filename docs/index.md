@@ -60,15 +60,16 @@ jq_df_filtered, job_id_to_target_phrase = job_quality.extract_job_quality(
 ```
 
 The output dataframe `jq_df_filtered` should look like this:
+
 | id | description | clean_description | job_quality_label | sentences_split | ngrams | target_phrase | cosine_similarity | subcategory |
 |-----|-------|-----------|----------|-------|--------|--------|---------|----------|
-| 123 | [This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | a cycle to work | Cycle to work | 0.965111 | PERKS |
-| 123 | [This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | many benefits such as | benefits | 0.874949 | PERKS |
-| 123 | [This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | such as a pension | pension | 0.821573 | COMP |
-| 123 | [This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | a pension scheme and | pension scheme | 0.964935 | COMP |
-| 234 | [This is a job advert for a bank job. There ar... | This is a job advert for a bank job. There are... | LABEL_1 | There are free childcare vouchers. | There are free childcare vouchers. | childcare vouchers | 0.838904 | CARING |
-| 234 | [This is a job advert for a bank job. There ar... | This is a job advert for a bank job. There are... | LABEL_1 | We also offer a yearly bonus and generous salary. | bonus and generous salary. | compensation | 0.576268 | COMP |
-| 234 | [This is a job advert for a bank job. There ar... | This is a job advert for a bank job. There are... | LABEL_1 | We also offer a yearly bonus and generous salary. | a yearly bonus and | performance bonus | 0.618560 | COMP |
+| 123 | This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | a cycle to work | Cycle to work | 0.965111 | PERKS |
+| 123 | This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | many benefits such as | benefits | 0.874949 | PERKS |
+| 123 | This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | such as a pension | pension | 0.821573 | COMP |
+| 123 | This is a job advert. It has many benefits su... | This is a job advert. It has many benefits suc... | LABEL_1 | It has many benefits such as a pension scheme ... | a pension scheme and | pension scheme | 0.964935 | COMP |
+| 234 | This is a job advert for a bank job. There ar... | This is a job advert for a bank job. There are... | LABEL_1 | There are free childcare vouchers. | There are free childcare vouchers. | childcare vouchers | 0.838904 | CARING |
+| 234 | This is a job advert for a bank job. There ar... | This is a job advert for a bank job. There are... | LABEL_1 | We also offer a yearly bonus and generous salary. | bonus and generous salary. | compensation | 0.576268 | COMP |
+| 234 | This is a job advert for a bank job. There ar... | This is a job advert for a bank job. There are... | LABEL_1 | We also offer a yearly bonus and generous salary. | a yearly bonus and | performance bonus | 0.618560 | COMP |
 
 Meanwhile, the more concise output, `job_id_to_target_phrase`, should look like this:
 
