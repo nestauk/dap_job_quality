@@ -25,7 +25,7 @@ The overall approach taken is to chunk up an input sentence into pieces that are
 
 1. **Initial cleaning**: The input sentence is chunked up into smaller pieces. At first, it is split up on characters that commonly indicate a list, eg ":" (see [`split_text()`](https://github.com/nestauk/dap_job_quality/blob/647565433a4ce21e510de0b574443d516fc5a037/dap_job_quality/pipeline/find_job_quality.py#L91)). Digits are also replaced with 'X' because for our purposes, the exact number is not important: for example, we would like our pipeline to treat "25 days of annual leave" and "30 days of annual leave" as the same.
 
-2. **Sentence chunking**: Then, if the sentence is 6 words or fewer, it is kept whole; otherwise, a rolling window of 4 words is applied. We will refer to these smaller chunks as **ngrams** - mostly they will be 4 words long, but some may be shorter and some may be as long as 6 words.
+2. **Sentence chunking**: Then, if the sentence is 6 words or fewer, it is kept whole; otherwise, a rolling window of 4 words is applied. We will refer to these smaller chunks as **ngrams** - mostly they will be 4 words long, but some may be shorter and some may be as long as 6 words. We chose this rolling window size as it is similar to the lengths of the target phrases we match to in the next steps.
 
 3. **Embedding**: both the ngrams and the target phrases from the taxonomy are embedded, both using the pretrained model [`all-MiniLM-L6-v2`](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2). This model was chosen because it is relatively small, optimised for sentence similarity tasks, and has been pretrained on a large corpus of text.
 
