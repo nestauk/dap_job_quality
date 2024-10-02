@@ -1,0 +1,40 @@
+model: jjzha/jobbert-base-cased
+max_length: 128
+seed: 42
+jq_threshold: 0.3
+cs_threshold:
+  CAREER: 0.6
+  FLEX_HOURS: 0.65
+  HOURS: 0.6
+  FLEX_LOC: 0.6
+  LEAVE: 0.65
+  CONTRACT: 0.5
+  LOC: 0.6
+  OTHER: 0.55
+
+sweep_config:
+  method: random
+  metric:
+    name: f1
+    goal: maximize
+  parameters:
+    epochs:
+      values: [1] # not varying epochs for now - as per this tutorial: https://wandb.ai/matt24/vit-snacks-sweeps/reports/Hyperparameter-Search-for-HuggingFace-Transformer-Models--VmlldzoyMTUxNTg0
+    learning_rate:
+      values: [2e-4, 2e-5, 2e-6]
+    batch_size:
+      values: [8, 16, 32, 64]
+    weight_decay:
+      values: [0.1, 0.01, 0.001]
+
+train_config:
+  learning_rate: 0.000002
+  per_device_train_batch_size: 32
+  per_device_eval_batch_size: 32
+  weight_decay: 0.1
+  num_train_epochs: 10
+  evaluation_strategy: "epoch"
+  save_strategy: "epoch"
+  metric_for_best_model: "f1"
+  load_best_model_at_end: True
+  early_stopping_patience: 2

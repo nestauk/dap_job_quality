@@ -1,0 +1,200 @@
+"""
+Functions to minimally clean job advertisements.
+"""
+
+from hashlib import md5
+import nltk
+from nltk.corpus import stopwords
+from nltk.util import ngrams
+import re
+from toolz import pipe
+from typing import List, Tuple
+
+# Pattern for fixing a missing space between enumerations, for
+# split_sentences()
+compiled_missing_space_pattern = re.compile("([a-z])([A-Z0-9])")
+# Characters outside these rules will be padded, for pad_punctuation()
+compiled_nonalphabet_nonnumeric_pattern = re.compile(r"([^a-zA-Z0-9] )")
+
+# The list of camel cases which should be kept in
+exception_camelcases = [
+    "JavaScript",
+    "WordPress",
+    "PowerPoint",
+    "CloudFormation",
+    "CommVault",
+    "InDesign",
+    "GitHub",
+    "GitLab",
+    "DevOps",
+    "QuickBooks",
+    "TypeScript",
+    "XenDesktop",
+    "DevSecOps",
+    "CircleCi",
+    "LeDeR",
+    "CeMap",
+    "MavenAutomation",
+    "SaaS",
+    "iOS",
+    "MySQL",
+    "MongoDB",
+    "NoSQL",
+    "GraphQL",
+    "VoIP",
+    "PhD",
+    "HyperV",
+    "PaaS",
+    "ArgoCD",
+    "WinCC",
+    "AutoCAD",
+]
+
+# Any trailing chars that match these are removed
+trim_chars = [" ", ".", ",", ";", ":", "\xa0"]
+
+
+def detect_camelcase(text):
+    """
+    Splits a word written in camel-case into separate sentences. This fixes a case
+    when the last word of a sentence in not seperated from the capitalised word of
+    the next sentence. This tends to occur with enumerations.
+    For example, the string "skillsBe" will be converted to "skills. Be"
+    Some camelcases are allowed though - these are found and replaced. e.g. JavaScript
+    Note that the present solution doesn't catch all such cases (e.g. "UKSkills")
+    Reference: https://stackoverflow.com/questions/1097901/regular-expression-split-string-by-capital-letter-but-ignore-tla
+    """
+    text = compiled_missing_space_pattern.sub(r"\1. \2", str(text))
+    for exception in exception_camelcases:
+        exception_cleaned = compiled_missing_space_pattern.sub(r"\1. \2", exception)
+        if exception_cleaned in text:
+            text = text.replace(exception_cleaned, exception)
+
+    return text
+
+
+punctuation_replacement_rules = {
+    # old patterns: replacement pattern
+    # Convert bullet points to fullstops
+    "[\u2022\u2023\u25E6\u2043\u2219*]": ". ",
+    r"[/:\\]": " ",  # Convert colon, forward and backward slashes to spaces
+}
+
+compiled_punct_patterns = {
+    re.compile(p): v for p, v in punctuation_replacement_rules.items()
+}
+
+
+def split_on_period_space(text: str):
+    """
+    Inserts a space after a period if the period is followed by an uppercase letter or digit
+    without any intervening space, as long it is not preceded by a digit or the pound sign.
+    """
+    pattern = re.compile(r"(?<![\d£])\.([A-Z\d])")
+
+    # Transform the text by inserting a space where necessary
+    new_text = pattern.sub(r". \1", text)
+
+    return new_text
+
+
+def replacements(text):
+    """
+    Ampersands and bullet points need some tweaking to be most useful in the pipeline.
+    Some job adverts have different markers for a bullet pointed list. When this happens
+    we want them to be in a fullstop separated format.
+    e.g. ";• managing the grants database;• preparing financial and interna"
+    ":•\xa0NMC registration paid every year•\xa0Free train"
+    """
+    text = (
+        text.replace("&", "and")
+        .replace("\xa0", " ")
+        .replace("\r", ".")
+        .replace("\n", ".")
+        .replace("[", "")
+        .replace("]", "")
+    )
+
+    for pattern, rep in compiled_punct_patterns.items():
+        text = pattern.sub(rep, text)
+
+    return text.strip()
+
+
+def clean_text(text: str) -> List[str]:
+    """Clean a job description by:
+            - detecting camelcase
+            - replacing punctuation
+            - splitting into sentences
+
+    Args:
+            text (str): job description
+
+    Returns:
+            List[str]: List of cleaned job description sentences
+    """
+    return pipe(text, detect_camelcase, replacements, split_on_period_space)
+
+
+def split_sentences(text: str) -> List[str]:
+    """Splits job adverts into sentences.
+
+    Splits on:
+            - .?!
+
+    Args:
+            text str: job advert
+
+    Returns:
+            List[str]: A list of sentences
+    """
+    # split phrases on .?!
+    pattern = re.compile(r"([.?!])\s*")
+    # Split the text into sentences using the pattern
+    sentences = re.split(pattern, text)
+
+    return list(set(sentences))
+
+
+def short_hash(text: str) -> int:
+    """Create a short hash from a string
+
+    Args:
+            text (str): string to hash
+
+    Returns:
+            int: short hash
+    """
+
+    hx_code = md5(text.encode()).hexdigest()
+    int_code = int(hx_code, 16)
+    short_code = str(int_code)[:16]
+    return int(short_code)
+
+
+def tokenize(text: str, n: int = 2) -> List[Tuple[str, ...]]:
+    """
+    Tokenize the input text into n-grams.
+
+    This function tokenizes the input text into n-grams after converting the text to lowercase
+    and removing non-alphabetic characters and stopwords.
+
+    **Use `clean_text()` before using this function**
+
+    #TODO: remove the `.isalpha()` part because it conflicts with the functions called as part of `clean_text()`
+
+    Args:
+            text (str): The text to be tokenized.
+            n (int): The number of elements in each n-gram (default is 2).
+
+    Returns:
+            List[Tuple[str, ...]]: A list of n-grams, where each n-gram is represented as a tuple of strings.
+    """
+    tokens = nltk.word_tokenize(text)
+    tokens = [
+        word.lower() for word in tokens if word.isalpha()
+    ]  # Remove non-alphabetic tokens
+    stop_words = set(stopwords.words("english"))
+    tokens = [word for word in tokens if word not in stop_words]
+    n_grams = list(ngrams(tokens, n))
+    return n_grams

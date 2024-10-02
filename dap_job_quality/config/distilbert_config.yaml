@@ -1,0 +1,17 @@
+model: distilbert-base-uncased
+max_length: 128
+
+sweep_config:
+  method: random
+  metric:
+    name: f1
+    goal: maximize
+  parameters:
+    epochs:
+      values: [1] # not varying epochs for now - as per this tutorial: https://wandb.ai/matt24/vit-snacks-sweeps/reports/Hyperparameter-Search-for-HuggingFace-Transformer-Models--VmlldzoyMTUxNTg0
+    learning_rate:
+      values: [2e-4, 2e-5, 2e-6]
+    batch_size:
+      values: [8, 16, 32, 64]
+    weight_decay:
+      values: [0.1, 0.01, 0.001]
