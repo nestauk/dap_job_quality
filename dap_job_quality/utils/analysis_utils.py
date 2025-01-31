@@ -114,15 +114,17 @@ def extract_salary_info(text: str) -> List[Dict[str, Union[float, str, np.float6
 
 # Define the keywords for permanent and temporary contracts
 permanent_keywords = r"\b(permanent|ongoing|long-term|long term|indefinite)\b"
-temporary_keywords = r"(contract will last from|temporary|fixed-term|fixed term|maternity|short-term|interim|seasonal|short and long term positions|short term positions|month contract|on a contract basis|contract position|contract period)"
+temporary_keywords = r"(contract will last from|contract until|temporary|fixed-term|fixed term|maternity|short-term|interim|seasonal|short and long term|short term|long and short term|month[s]? contract|on a contract basis|contract position|contract period|\d{1,2}[- ]?month placement|rolling contract|short[- ]?term contract|[cC]ontract\s+\d{1,2}\s+month|initial \d{1,2}[- ]?month|\d{1,2}[-\s+]?month\s+initial|contract length|block booking|contract\s+duration|duration\s+\d{1,2}\s+month|secondment)"
 apprenticeship_keywords = r"apprentice"
+zero_hours_keywords = r"\b(zero hour|zero-hour|zero hours|zero-hours|on call|casual contract|casual cover|bank staff|staff bank|bank work|bank basis)\b"
+zero_hours_exclusion = r"\b(no zero hours|no zero-hours)\b"
 
 
 def classify_contract_type(sentence: str):
     """
     Classifies the contract type based on keywords in the sentence.
     Returns 'Permanent' if permanent keywords are found,
-    'Temporary' if temporary keywords are found, otherwise 'Unknown'.
+    'Temporary' if temporary keywords are found, 'Zero Hours' if zero hours contract keywords are found, otherwise 'Unknown'.
 
     Search for 'Temporary' first because many jobs are temporary 'with the potential to become permanent'.
     """
@@ -132,6 +134,10 @@ def classify_contract_type(sentence: str):
         return "Apprenticeship"
     elif re.search(permanent_keywords, sentence, re.IGNORECASE):
         return "Permanent"
+    elif re.search(zero_hours_exclusion, sentence, re.IGNORECASE):
+        return "Unknown"  # Exclude cases like "no zero hours"
+    elif re.search(zero_hours_keywords, sentence, re.IGNORECASE):
+        return "Zero Hours"
     else:
         return "Unknown"
 
