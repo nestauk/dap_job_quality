@@ -1,3 +1,12 @@
+"""
+Get raw salary info for the jobs in the healthcare sample.
+
+Usage:
+```
+python dap_job_quality/analysis/healthcare_analysis/extract_salaries.py --package-suffixes=.txt,.py,.yaml --datastore=s3 run --production=True
+```
+"""
+
 import os
 
 os.system(
@@ -6,6 +15,7 @@ os.system(
 
 from metaflow import FlowSpec, step, Parameter, batch
 import pandas as pd
+from typing import List
 
 from dap_job_quality import BUCKET_NAME, logging
 from dap_job_quality.getters.data_getters import (
@@ -17,7 +27,23 @@ from dap_job_quality.getters.data_getters import (
 METAFLOW_PATH = "metaflow/data/ReedAdCurateFlow/1700394027436526/"
 
 
-def process_data(s3_key, afs_ids):
+def process_data(s3_key: str, afs_ids: List[int]):
+    """
+    Retrieves job advertisement data from an S3 JSON file, filters it by a list of IDs,
+    and processes salary-related columns.
+
+    Parameters:
+    -----------
+    s3_key : str
+        The S3 key (path) of the JSON file.
+    afs_ids : List[int]
+        A list of advertisement IDs to filter the data.
+
+    Returns:
+    --------
+    pd.DataFrame
+        A DataFrame containing filtered job advertisements with numeric salary columns.
+    """
     data = load_s3_json(BUCKET_NAME, s3_key)
     temp_df = pd.DataFrame(data)
     temp_df["id"] = pd.to_numeric(temp_df["id"], downcast="integer")
