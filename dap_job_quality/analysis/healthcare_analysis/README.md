@@ -7,12 +7,15 @@
 # Pipeline
 
 Step 1:
+
 **`filter_with_soc_codes.py`** This script gets the dataset of job titles that have been mapped to SOC codes, then uses the list of in-scope SOC codes to filter this dataset. It saves both the unique IDs of the job ads that are in scope for this analysis, and the dataframe of job IDs, job titles and SOC codes.
 
 Step 2 (can run in either order):
+
 **`extract_job_quality.py`** This metaflow extracts job quality measures for the jobs in the healthcare sample.
 
 **`extract_salaries.py`** This metaflow gets raw salary info for the jobs in the healthcare sample.
 
 Step 3 (must run after `extract_job_quality.py`):
+
 **`classify_contract_types.py`** This script uses rule-based classification and regexes to determine the contract type of jobs in the sample.
