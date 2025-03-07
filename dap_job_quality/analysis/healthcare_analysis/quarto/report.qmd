@@ -1,5 +1,5 @@
 ---
-title: "Job quality in the healthcare"
+title: "Job quality in the health and social care sector"
 # Changing the background colour for the title block
 title-block-banner: "#0000FF"
 # Changing the text colour for the title block
