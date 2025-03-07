@@ -1,0 +1,302 @@
+---
+title: "Job quality in the healthcare"
+# Changing the background colour for the title block
+title-block-banner: "#0000FF"
+# Changing the text colour for the title block
+title-block-banner-color: "#FFFFFF"
+# Do we want to add a table of contents: true/false
+toc: true
+# Where do we want the table of contents to be located: left/right/body
+toc-location: left
+# Do we want the sections numbered: true/false
+number-sections: true
+format:
+  html:
+    page-layout: full
+    code-fold: true
+jupyter: python3
+---
+
+# Introduction
+
+```{python}
+#| echo: false
+#| warning: false
+
+# Preamble: load data and libraries and do any preliminary processing
+
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+import plotly.io as pio
+pio.renderers.default = "notebook"
+
+from dap_job_quality.getters.healthcare import *
+from dap_job_quality.analysis.healthcare_analysis.utils import create_uk_heatmap, plot_years, grouped_bar, stacked_bar
+
+healthcare_sample = get_salaries_w_soc_region()
+job_titles = get_occupations()
+
+healthcare_sample['year'] = pd.to_datetime(healthcare_sample['created_x'], dayfirst=True).dt.year
+
+# Not much data from 2020 so get rid of that year
+healthcare_sample = healthcare_sample[healthcare_sample['year']>2020]
+in_scope_ids = healthcare_sample['id'].unique()
+
+job_qual = pd.read_parquet('s3://open-jobs-lake/job_quality/health_social_care/health_jobs_jq_dimensions.parquet')
+job_qual = job_qual[job_qual['id'].isin(in_scope_ids)]
+
+job_qual_processed, dimensions_wide = analysis_utils.process_jq_data(job_qual)
+
+sample_w_salaries_dimensions = pd.merge(healthcare_sample, dimensions_wide, on='id', how='left')
+
+
+contracts_full = get_contracts_full()
+contract_df = get_contract_per_job()
+contracts_complete = get_contracts_complete()
+
+# inner join to make sure we don't include 2020 data
+contracts_salaries_soc_region = pd.merge(contracts_complete, healthcare_sample, on='id', how='inner')
+
+```
+
+# Sample
+
+Key takeaways:
+
+* Our data covers the years 2021--2024, but it should be noted that this only goes up to November 2024 -- so the year 2024 is incomplete.
+
+* The sample is biased towards specific regions of England, with London and South East England overrepresented compared to Northern Ireland and North East England.
+
+* Paramedics are underrepresented. Ambulance staff are known to report high levels of burnout (40%) but we cannot investigate this properly with the current sample.
+
+## Representation of different ITL1 regions
+
+The table below shows how many job adverts (across all the SOC codes in scope; years 2021-2024) we have for each ITL1 region of the UK. We have the most data for London and the South East, and the least data for the North East of England and Northern Ireland.
+
+```{python}
+#| echo: false
+#| warning: false
+itl1_counts = healthcare_sample['itl_1_name'].value_counts()
+itl1_counts.reset_index().style
+```
+
+Below you can see this data as a heatmap.
+```{python}
+#| echo: false
+
+itl1_code_counts = pd.DataFrame(healthcare_sample['itl_1_code'].value_counts())
+create_uk_heatmap(itl1_code_counts, count_col="count")
+```
+
+## Distribution by year
+
+Our sample contains more job adverts from 2021 compared to other years. This could be a fault with the sample, or it could be because of increased staffing needs in 2021 due to the COVID-19 pandemic.
+
+It should also be borne in mind that the data for 2024 only goes up to November, i.e. it is not a complete year.
+
+```{python}
+
+year_counts = healthcare_sample['year'].value_counts().reset_index()
+year_counts.columns = ['year', 'count']
+
+# Sort by year for a better visual order
+year_counts = year_counts.sort_values(by="year")
+
+plot_years(year_counts)
+```
+
+
+## Representation of different staff groups
+
+These were the different occupations considered for the analysis:
+```{python}
+
+grouped = job_titles.groupby(["soc_2020_4_digit","soc_4_digit_name"])["Group Title"].unique().reset_index()
+grouped.style
+```
+
+Below you can see the actual distribution of these 4-digit SOC codes in the data:
+
+```{python}
+# Count occurrences of each soc_4_digit_name
+soc_counts = healthcare_sample['soc_4_digit_name'].value_counts().reset_index()
+soc_counts.columns = ['soc_4_digit_name', 'count']
+
+# Create the bar chart
+fig = px.bar(soc_counts,
+             y='soc_4_digit_name',
+             x='count',
+            #  title='Counts of SOC 4-Digit Names',
+             labels={'soc_4_digit_name': 'SOC 4-Digit Name', 'count': 'Count'},
+             text='count')
+
+# Customize layout
+fig.update_layout(width=1000,
+                  height=600,
+                  xaxis={'categoryorder':'total descending'},
+                  xaxis_tickangle=-45)  # Rotate labels for better readability
+
+fig.show()
+```
+
+```{python}
+#| echo: false
+other_health = soc_counts[soc_counts['soc_4_digit_name']=='Other health professionals n.e.c.']['count'].values[0]
+other_nurses = soc_counts[soc_counts['soc_4_digit_name']=='Other registered nursing professionals']['count'].values[0]
+
+other_health_and_nurses = other_health + other_nurses
+
+other_health_and_nurses_prop = round(other_health_and_nurses / soc_counts['count'].sum(), 2) * 100
+```
+
+It can be seen that the sample is dominated by "Other registered nursing professionals" and "Other health professionals n.e.c." ('Occupational health advisers' 'Other health professionals n.e.c. ' 'Respiratory physiologists' 'Operating department practitioners ' 'Audiologists' 'Health promotion officers' 'Cardiac physiologists' 'Sexual health advisers' 'Dietitians ' 'Medical physicists and nuclear medicine scientists' 'Mental health workers' 'Orthotists and prosthetists ') which together make up 41% of the sample.
+
+# Flexible hours and flexible location
+
+According to a report by [nhsproviders.org](https://nhsproviders.org/media/698889/10-facts-about-the-nhs-workforce.pdf#:~:text=March%202024,19):
+
+Stress and burnout are cited as key reasons for staff leaving the NHS; "large proportions of staff reported experiencing burnout" in 2022
+
+Stress, anxiety and depression are now the top cause of sickness days among NHS staff
+
+Lack of work-life balance was one of the key reasons staff cited for leaving in Q1 of 2024, accounting for 19% of leavers
+
+```{python}
+grouped_soc = sample_w_salaries_dimensions.groupby("soc_4_digit_name").agg(
+    total_ads=("id", "count"),
+    flex_loc_mentions=("FLEX_LOC", "sum"),
+    flex_hours_mentions=("FLEX_HOURS", "sum")
+).reset_index()
+
+# Calculate proportion
+grouped_soc["flex_loc_proportion"] = grouped_soc["flex_loc_mentions"] / grouped_soc["total_ads"]
+grouped_soc["flex_hours_proportion"] = grouped_soc["flex_hours_mentions"] / grouped_soc["total_ads"]
+
+
+melted_soc = grouped_soc.melt(id_vars=["soc_4_digit_name"],
+                              value_vars=["flex_loc_proportion", "flex_hours_proportion"],
+                              var_name="Flexibility Type",
+                              value_name="Proportion")
+
+# Map better labels
+melted_soc["Flexibility Type"] = melted_soc["Flexibility Type"].map({
+    "flex_loc_proportion": "Flexible Location",
+    "flex_hours_proportion": "Flexible Hours"
+})
+
+grouped_bar(melted_soc, x="Proportion", y="soc_4_digit_name", colour="Flexibility Type")
+```
+
+Among the 4-digit SOC groups with the highest proportions of adverts mentioning flexible hours are "Pharmaceutical technicians", "Registered mental health nurses", "Registered nurse practitioners", "Registered community nurses" and "Generalist medical practitioners". This is relevant to note as these are some of the occupations facing the highest staff shortages at present: numbers of community nurses are estimated to have fallen by 7% since 2010 and numbers of mental health nurses are estimated to have fallen by 2% (https://www.nuffieldtrust.org.uk/resource/the-nhs-workforce-in-numbers), despite government pledges to increase the overall numbers of nurses. Similarly, the number of GPs fell between 2019 and 2022 (https://publications.parliament.uk/pa/cm5803/cmselect/cmhealth/115/report.html).
+
+We can also examine the change over time in rates of mentions of flexible hours or flexible location. The graph below shows the same information as above, but broken down by year. There is a separate plot for each 4-digit SOC code.
+
+```{python}
+
+grouped = sample_w_salaries_dimensions.groupby(["year", "soc_4_digit_name"]).agg(
+    total_ads=("id", "count"),
+    flex_loc_mentions=("FLEX_LOC", "sum"),
+    flex_hours_mentions=("FLEX_HOURS", "sum")
+).reset_index()
+
+# Calculate proportion
+grouped["flex_loc_proportion"] = grouped["flex_loc_mentions"] / grouped["total_ads"]
+grouped["flex_hours_proportion"] = grouped["flex_hours_mentions"] / grouped["total_ads"]
+
+# Melt dataframe for easier visualization
+melted = grouped.melt(id_vars=["year", "soc_4_digit_name"],
+                      value_vars=["flex_loc_proportion", "flex_hours_proportion"],
+                      var_name="Flexibility Type",
+                      value_name="Proportion")
+
+# Map better labels
+melted["Flexibility Type"] = melted["Flexibility Type"].map({
+    "flex_loc_proportion": "Flexible Location",
+    "flex_hours_proportion": "Flexible Hours"
+})
+
+# Plot with Plotly
+fig = px.line(melted, x="year", y="Proportion",
+              color="Flexibility Type",
+              facet_col="soc_4_digit_name",  # Separate by SOC name
+              facet_col_wrap=3,  # Arrange in multiple rows
+              title="Proportion of Job Adverts Mentioning Flexible Hours 2021-2024",
+              labels={"year": "Year", "Proportion": "% of ads"},
+              markers=True, template="plotly_white")
+
+# Adjust layout for better readability
+fig.update_layout(
+    height=1600,
+    width=1200,
+    xaxis=dict(type="category")  # Ensure years are treated as discrete values
+)
+
+```
+
+Midwifery nurses, registered nurse practitioners and registered community nurses have all seen an increase in rates of job ads offering flexible hours in our data in the years 2021-2024. Meanwhile, paramedics have seen a decrease over the same period of time, despite a brief rise in 2022.
+
+```{python}
+
+# Filter only 2021 and 2024 data
+df_filtered = grouped[grouped["year"].isin([2021, 2024])]
+
+# Pivot table to compare 2021 vs 2024 values
+df_pivot = df_filtered.pivot(index="soc_4_digit_name", columns="year", values="flex_hours_proportion")
+
+# Drop rows that don't have both years
+df_pivot = df_pivot.dropna()
+
+# Calculate change in flex_hours_proportion
+df_pivot["change"] = df_pivot[2024] - df_pivot[2021]
+
+# Sort by biggest increase
+df_pivot_sorted = df_pivot.sort_values(by="change", ascending=False)
+
+df_pivot_sorted = df_pivot_sorted.reset_index()
+
+# Create the bar chart
+fig = px.bar(df_pivot_sorted.reset_index(),
+             x="change",
+             y="soc_4_digit_name",
+             orientation="h",
+             title="Change in Flex Hours Proportion (2021 to 2024)",
+             labels={"change": "Change in Flex Hours Proportion", "soc_4_digit_name": "SOC 4-Digit Name"},
+             color="change",  # Automatically color positive/negative bars
+             color_continuous_scale=["red", "blue"]  # Red for decreases, blue for increases
+)
+
+# Add a vertical line at 0 for reference
+fig.add_vline(x=0, line_dash="dash", line_color="black")
+
+# Improve layout
+fig.update_layout(
+    width=1000,
+    height=800,
+    xaxis_title="Increase / Decrease in Flex Hours Proportion 2021-2024",
+    yaxis_title=None,#"SOC 4-Digit Name",
+    coloraxis_showscale=False  # Hide color scale
+)
+
+fig.show()
+```
+
+# Contract type
+
+Examining the distribution of contract types is of interest because of the increased reliance on temporary and locum staff to plug workforce shortages.
+
+Our algorithm is able to find contract information for about 20% of job adverts in the sample.
+
+```{python}
+# Count occurrences of final_contract_type for each soc_4_digit_name
+contract_counts = contracts_salaries_soc_region.groupby(['soc_4_digit_name', 'final_contract_type']).size().reset_index(name='count')
+contract_counts['percentage'] = contract_counts.groupby('soc_4_digit_name')['count'].transform(lambda x: x / x.sum() * 100)
+
+stacked_bar(contract_counts, x='count', y='soc_4_digit_name', colour='final_contract_type')
+```
+
+
+```{python}
+stacked_bar(contract_counts, x='percentage', y='soc_4_digit_name', colour='final_contract_type')
+```
