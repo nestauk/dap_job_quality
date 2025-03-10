@@ -1,22 +1,42 @@
 """
 All utils functions for creating the quarto report
 """
-
+import boto3
+from botocore.exceptions import NoCredentialsError
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
+from pathlib import Path
 import plotly.express as px
 
-from dap_job_quality import PROJECT_DIR
+
+from dap_job_quality import PROJECT_DIR, BUCKET_NAME
 
 HEALTHCARE_ANALYSIS_DIR = PROJECT_DIR / "dap_job_quality/analysis/healthcare_analysis"
+ITL1_FILE_PATH = HEALTHCARE_ANALYSIS_DIR / "ITL1.geojson"
+S3_KEY = "job_quality/health_social_care/ITL1.geojson"
 
 
 def get_itl1_shapes():
     """
     Obtained from https://www.data.gov.uk/dataset/1db83d90-b734-472a-9d14-6f3ae7a0bdf0/international-territorial-level-1-january-2021-boundaries-uk-buc
     """
-    return gpd.read_file(HEALTHCARE_ANALYSIS_DIR / "ITL1.geojson")
+    # return gpd.read_file(HEALTHCARE_ANALYSIS_DIR / "ITL1.geojson")
+    if ITL1_FILE_PATH.exists():
+        return gpd.read_file(ITL1_FILE_PATH)
+
+    # Ensure the directory exists
+    HEALTHCARE_ANALYSIS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Download file from S3
+    s3 = boto3.client("s3")
+    try:
+        s3.download_file(S3_BUCKET, S3_KEY, str(ITL1_FILE_PATH))
+        print(f"Downloaded {S3_KEY} from S3 to {ITL1_FILE_PATH}")
+    except NoCredentialsError:
+        raise RuntimeError("AWS credentials not found. Ensure you have access to S3.")
+
+    return gpd.read_file(ITL1_FILE_PATH)
 
 
 def create_uk_heatmap(df, count_col="count"):
@@ -83,7 +103,7 @@ def plot_years(year_counts):
     return fig
 
 
-def stacked_bar(counts_df, x, y, colour):
+def stacked_bar(counts_df, x, y, colour, sorted_order=None):
     # Create a stacked bar chart
     fig = px.bar(
         counts_df,
@@ -102,8 +122,10 @@ def stacked_bar(counts_df, x, y, colour):
     fig.update_layout(
         width=1000,  # Adjust width
         height=800,  # Adjust height
-        yaxis={"categoryorder": "total ascending"},  # Sort bars by total proportion
     )
+
+    if sorted_order is not None:
+        fig.update_yaxes(categoryorder="array", categoryarray=sorted_order)
 
     return fig
 
@@ -131,3 +153,40 @@ def grouped_bar(counts_df, x, y, colour):
     )
 
     return fig
+
+
+def get_groups_w_valid_sample_size(
+    df, grouping_cols=["soc_4_digit_name", "year"], min_sample_size=100
+):
+    """Find groupings that have size >= a minimum.
+
+    Example usage:
+    ```
+    valid_soc_names = get_groups_w_valid_sample_size(sample_w_salaries_dimensions, ['soc_4_digit_name', 'year'], 100)
+    valid_soc_names
+
+    ['Clinical psychologists',
+    'Generalist medical practitioners',
+    'Health services and public health managers and directors',
+    'Medical and dental technicians',
+    ...
+    ]
+    ```
+    """
+
+    if isinstance(grouping_cols, str):
+        grouping_cols = [grouping_cols]
+
+    grouped_counts = df.groupby(grouping_cols).size()
+
+    # If grouping by more than one column, unstack to create a wide format
+    if len(grouping_cols) > 1:
+        grouped_counts = grouped_counts.unstack()
+
+        valid_groups = grouped_counts[
+            (grouped_counts >= min_sample_size).all(axis=1)
+        ].index.tolist()
+    else:
+        valid_groups = grouped_counts[grouped_counts >= min_sample_size].index.tolist()
+
+    return valid_groups

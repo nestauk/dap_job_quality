@@ -19,11 +19,28 @@ jupyter: python3
 
 # Introduction
 
+This report is intended to give a flavour of the type and scale of data that we have available, and the features we can extract from it.
+
+## Key takeaways
+
+* Registered mental health nurses, registered nurse practitioners, registered community nurses and generalist medical practitioners are among the occupations with the highest proportions of job adverts offering flexible hours. In these occupations, about 30% of adverts were found to offer flexible hours - slightly higher than the statistic of 29% that we found in a random sample of job adverts across various occupations (see our earlier report [Job Quality in England](https://public.flourish.studio/story/2552922/))
+
+* These same occupations have all seen an increase in the number of job ads offering flexible hours in the period 2021-2024. Overall, across the different types of nursing occupations considered here, most have seen an increase in the proportion of job adverts offering flexible hours since 2021.
+
+* Of these occupations, the majority of adverts for registered nurse practitioners and registered community nurses in our data are advertised as permanent contracts. However, the majority of job adverts for generalist medical practitioners are advertised as temporary contracts.
+
 ```{python}
 #| echo: false
 #| warning: false
 
 # Preamble: load data and libraries and do any preliminary processing
+import warnings
+import logging
+warnings.simplefilter("ignore")
+
+# Suppress botocore and boto3 logs
+logging.getLogger("botocore.credentials").setLevel(logging.ERROR)
+logging.getLogger("boto3").setLevel(logging.ERROR)
 
 import pandas as pd
 import plotly.express as px
@@ -33,43 +50,27 @@ import plotly.io as pio
 pio.renderers.default = "notebook"
 
 from dap_job_quality.getters.healthcare import *
-from dap_job_quality.analysis.healthcare_analysis.utils import create_uk_heatmap, plot_years, grouped_bar, stacked_bar
+from dap_job_quality.analysis.healthcare_analysis.utils import create_uk_heatmap, plot_years, grouped_bar, stacked_bar, get_groups_w_valid_sample_size
 
-healthcare_sample = get_salaries_w_soc_region()
 job_titles = get_occupations()
 
-healthcare_sample['year'] = pd.to_datetime(healthcare_sample['created_x'], dayfirst=True).dt.year
+healthcare_sample = pd.read_parquet("s3://open-jobs-lake/job_quality/health_social_care/outputs/healthcare_sample.parquet")
 
-# Not much data from 2020 so get rid of that year
-healthcare_sample = healthcare_sample[healthcare_sample['year']>2020]
-in_scope_ids = healthcare_sample['id'].unique()
+sample_w_salaries_dimensions = pd.read_parquet("s3://open-jobs-lake/job_quality/health_social_care/outputs/sample_w_salaries_dimensions.parquet")
 
-job_qual = pd.read_parquet('s3://open-jobs-lake/job_quality/health_social_care/health_jobs_jq_dimensions.parquet')
-job_qual = job_qual[job_qual['id'].isin(in_scope_ids)]
-
-job_qual_processed, dimensions_wide = analysis_utils.process_jq_data(job_qual)
-
-sample_w_salaries_dimensions = pd.merge(healthcare_sample, dimensions_wide, on='id', how='left')
-
-
-contracts_full = get_contracts_full()
-contract_df = get_contract_per_job()
-contracts_complete = get_contracts_complete()
-
-# inner join to make sure we don't include 2020 data
-contracts_salaries_soc_region = pd.merge(contracts_complete, healthcare_sample, on='id', how='inner')
+contracts_salaries_soc_region = pd.read_parquet("s3://open-jobs-lake/job_quality/health_social_care/outputs/contracts_salaries_soc_region.parquet")
 
 ```
 
-# Sample
+# Background information about the data sample
 
-Key takeaways:
+Key caveats concerning the data:
 
 * Our data covers the years 2021--2024, but it should be noted that this only goes up to November 2024 -- so the year 2024 is incomplete.
 
 * The sample is biased towards specific regions of England, with London and South East England overrepresented compared to Northern Ireland and North East England.
 
-* Paramedics are underrepresented. Ambulance staff are known to report high levels of burnout (40%) but we cannot investigate this properly with the current sample.
+* Paramedics are underrepresented. Ambulance staff are known to report high levels of burnout but we cannot investigate this properly with the current sample.
 
 ## Representation of different ITL1 regions
 
@@ -108,7 +109,7 @@ plot_years(year_counts)
 ```
 
 
-## Representation of different staff groups
+## Representation of different professional groups (using 4 digit SOC codes)
 
 These were the different occupations considered for the analysis:
 ```{python}
@@ -157,13 +158,19 @@ It can be seen that the sample is dominated by "Other registered nursing profess
 
 According to a report by [nhsproviders.org](https://nhsproviders.org/media/698889/10-facts-about-the-nhs-workforce.pdf#:~:text=March%202024,19):
 
-Stress and burnout are cited as key reasons for staff leaving the NHS; "large proportions of staff reported experiencing burnout" in 2022
+* Stress and burnout are cited as key reasons for staff leaving the NHS; "large proportions of staff reported experiencing burnout" in 2022
 
-Stress, anxiety and depression are now the top cause of sickness days among NHS staff
+* Stress, anxiety and depression are now the top cause of sickness days among NHS staff
 
-Lack of work-life balance was one of the key reasons staff cited for leaving in Q1 of 2024, accounting for 19% of leavers
+* Lack of work-life balance was one of the key reasons staff cited for leaving in Q1 of 2024, accounting for 19% of leavers
+
+Below, we will investigate the numbers of job adverts by SOC code and by year that mention flexible hours (e.g. part-time, compressed hours, job share) or flexible location (e.g. remote or hybrid working). Because many NHS roles are necessarily site-based, we focus primarily on flexible hours.
+
+The plot below shows the proportions of job adverts that mention flexible location (in blue) and flexible hours (in red) for each of the 4-digit SOC codes considered for this analysis.
 
 ```{python}
+#| label: fig-bar-flex_hours_flex_loc
+#| fig-cap: "The proportion of adverts for each 4-digit SOC code that mention flexible hours (red) and flexible location (blue)."
 grouped_soc = sample_w_salaries_dimensions.groupby("soc_4_digit_name").agg(
     total_ads=("id", "count"),
     flex_loc_mentions=("FLEX_LOC", "sum"),
@@ -189,13 +196,24 @@ melted_soc["Flexibility Type"] = melted_soc["Flexibility Type"].map({
 grouped_bar(melted_soc, x="Proportion", y="soc_4_digit_name", colour="Flexibility Type")
 ```
 
-Among the 4-digit SOC groups with the highest proportions of adverts mentioning flexible hours are "Pharmaceutical technicians", "Registered mental health nurses", "Registered nurse practitioners", "Registered community nurses" and "Generalist medical practitioners". This is relevant to note as these are some of the occupations facing the highest staff shortages at present: numbers of community nurses are estimated to have fallen by 7% since 2010 and numbers of mental health nurses are estimated to have fallen by 2% (https://www.nuffieldtrust.org.uk/resource/the-nhs-workforce-in-numbers), despite government pledges to increase the overall numbers of nurses. Similarly, the number of GPs fell between 2019 and 2022 (https://publications.parliament.uk/pa/cm5803/cmselect/cmhealth/115/report.html).
+Among the 4-digit SOC groups with the highest proportions of adverts mentioning flexible hours are "Pharmaceutical technicians" (38%), "Registered mental health nurses" (34%), "Registered nurse practitioners" (32%), "Registered community nurses" (31%) and "Generalist medical practitioners"(31%). This compares to 29% in a random sample of jobs across various sectors in the years 2021--2023 (see our earlier report [Job Quality in England](https://public.flourish.studio/story/2552922/)).
+
+These are also some of the occupations facing the highest staff shortages at present: numbers of community nurses are estimated to have fallen by 7% since 2010 and numbers of mental health nurses are estimated to have fallen by 2% (https://www.nuffieldtrust.org.uk/resource/the-nhs-workforce-in-numbers), despite government pledges to increase the overall numbers of nurses. Similarly, the number of GPs fell between 2019 and 2022 (https://publications.parliament.uk/pa/cm5803/cmselect/cmhealth/115/report.html).
 
 We can also examine the change over time in rates of mentions of flexible hours or flexible location. The graph below shows the same information as above, but broken down by year. There is a separate plot for each 4-digit SOC code.
 
-```{python}
+*NB this only includes SOC codes that had at least 100 adverts in each of the years 2021-2024 in our data.*
 
-grouped = sample_w_salaries_dimensions.groupby(["year", "soc_4_digit_name"]).agg(
+```{python}
+#| label: fig-bar-flex_hours_change-over-time
+#| fig-cap: "Change in time (2021-2024) in the percentage of adverts for each 4-digit SOC code that mention flexible hours (red) and flexible location (blue)."
+
+# Check for groups that have reasonable sample size
+valid_soc_names = get_groups_w_valid_sample_size(sample_w_salaries_dimensions, ['soc_4_digit_name', 'year'], 100)
+
+soc_flex_loc_year_sample = sample_w_salaries_dimensions[sample_w_salaries_dimensions['soc_4_digit_name'].isin(valid_soc_names)]
+
+grouped = soc_flex_loc_year_sample.groupby(["year", "soc_4_digit_name"]).agg(
     total_ads=("id", "count"),
     flex_loc_mentions=("FLEX_LOC", "sum"),
     flex_hours_mentions=("FLEX_HOURS", "sum")
@@ -235,9 +253,12 @@ fig.update_layout(
 
 ```
 
-Midwifery nurses, registered nurse practitioners and registered community nurses have all seen an increase in rates of job ads offering flexible hours in our data in the years 2021-2024. Meanwhile, paramedics have seen a decrease over the same period of time, despite a brief rise in 2022.
+Midwifery nurses, registered nurse practitioners and registered community nurses have all seen an increase in rates of job ads offering flexible hours in our data in the years 2021-2024. Pharmaceutical technicians have seen a decrease, but this is nonetheless the SOC category that had the highest proportion of job adverts mentioning flexible hours in the time period under consideration (2021--2024).
 
 ```{python}
+#| label: fig-bar-relative_change_flex_hours
+#| fig-cap: "Relative change in proportion of job adverts offering flexible hours between 2021 and 2024."
+
 
 # Filter only 2021 and 2024 data
 df_filtered = grouped[grouped["year"].isin([2021, 2024])]
@@ -286,17 +307,127 @@ fig.show()
 
 Examining the distribution of contract types is of interest because of the increased reliance on temporary and locum staff to plug workforce shortages.
 
-Our algorithm is able to find contract information for about 20% of job adverts in the sample.
+Our algorithm is able to find contract information for about 20% of job adverts in the sample. Here we present information for the 4-digit SOC codes where contract information was obtained for 100 or more job adverts.
 
 ```{python}
-# Count occurrences of final_contract_type for each soc_4_digit_name
-contract_counts = contracts_salaries_soc_region.groupby(['soc_4_digit_name', 'final_contract_type']).size().reset_index(name='count')
-contract_counts['percentage'] = contract_counts.groupby('soc_4_digit_name')['count'].transform(lambda x: x / x.sum() * 100)
-
-stacked_bar(contract_counts, x='count', y='soc_4_digit_name', colour='final_contract_type')
+#| echo: false
+contract_socs = get_groups_w_valid_sample_size(contracts_salaries_soc_region, ['soc_4_digit_name'], 100)
+contract_sample = contracts_salaries_soc_region[contracts_salaries_soc_region['soc_4_digit_name'].isin(contract_socs)]
 ```
 
+The first plot shows the number of adverts for each 4-digit SOC code for which contract information could be obtained, and within that, how many were permanent or temporary.
 
 ```{python}
-stacked_bar(contract_counts, x='percentage', y='soc_4_digit_name', colour='final_contract_type')
+#| label: fig-bar-contract_type_counts
+#| fig-cap: "Absolute numbers of job adverts offering different contract types by 4-digit SOC code."
+# Count occurrences of final_contract_type for each soc_4_digit_name
+contract_counts = contract_sample.groupby(['soc_4_digit_name', 'final_contract_type']).size().reset_index(name='count')
+contract_counts['percentage'] = contract_counts.groupby('soc_4_digit_name')['count'].transform(lambda x: x / x.sum() * 100)
+
+stacked_bar(contract_counts, x='count', y='soc_4_digit_name', colour='final_contract_type', sorted_order=contract_sample['soc_4_digit_name'].value_counts().index)
+```
+
+The plot below shows the proportion of permanent/temporary contracts for each profession, out of those job adverts where contract information could be classified. We can see that the following 4-digit SOC codes have the highest proportions of temporary contracts:
+
+* Midwifery nurses
+
+* Pharmaceutical technicians
+
+* Registered children's nurses
+
+... whereas the following SOC codes have the lowest proportion of temporary contracts:
+
+* "Other health professions n.e.c."
+
+* Physiotherapists
+
+* Speech and language therapists
+
+```{python}
+#| label: fig-bar-contract_type_proportions
+#| fig-cap: "Stacked bars showing the proportion of different contract types in job adverts for each 4-digit SOC code."
+
+sorted_order = (
+            contract_counts[contract_counts["final_contract_type"] == 'Permanent']
+            .sort_values(by="percentage", ascending=False)["soc_4_digit_name"]
+            .tolist()
+        )
+
+stacked_bar(contract_counts, x='percentage', y='soc_4_digit_name', colour='final_contract_type', sorted_order=sorted_order)
+```
+
+The plot below allows you to explore the regional distribution (at ITL1 level) of contract types for a given 4-digit SOC code. Some observations that stand out are:
+
+* For "Other registered nursing professionals", in every ITL1 region, more job adverts offer a permanent contract than a temporary contract
+
+* In most regions, there are more adverts for temporary than for permanent positions for Registered Mental Health nurses
+
+* Similarly, in most regions, there are more adverts for temporary than for permanent Midwifery Nurses
+
+* In this dataset, there is a mixed picture for Generalist Medical Practitioners. In London there are more permanent than temporary contracts being offered in job adverts, whereas in the South East, the reverse is true.
+
+```{python}
+#| label: fig-bar-contract_type_regional_interactive
+#| fig-cap: "Interactive plot showing absolute numbers of job adverts mentioning different contract types by ITL1 region and 4-digit SOC code."
+
+# Step 1: Aggregate data to get proportions
+df_counts = contract_sample.groupby(["soc_4_digit_name", "itl_1_name", "final_contract_type"]).size().reset_index(name="count")
+
+# Step 2: Get unique soc_4_digit_name values
+unique_socs = df_counts["soc_4_digit_name"].unique()
+
+# Step 3: Create an interactive Plotly figure
+fig = go.Figure()
+
+# Step 4: Add traces for each soc_4_digit_name (initially hidden)
+for i, soc in enumerate(unique_socs):
+    filtered_data = df_counts[df_counts["soc_4_digit_name"] == soc]
+
+    # Create traces for each contract type (stacked)
+    traces = []
+    for contract_type in df_counts["final_contract_type"].unique():
+        sub_data = filtered_data[filtered_data["final_contract_type"] == contract_type]
+
+        trace = go.Bar(
+            x=sub_data["count"],
+            y=sub_data["itl_1_name"],
+            name=contract_type,
+            orientation="h",
+            visible=(i == 0)  # Only show the first SOC 4-digit name by default
+        )
+        traces.append(trace)
+
+    fig.add_traces(traces)
+
+# Step 5: Create dropdown menu
+dropdown_buttons = [
+    {
+        "label": soc,
+        "method": "update",
+        "args": [
+            {"visible": [(j // len(df_counts["final_contract_type"].unique())) == i for j in range(len(fig.data))]},
+        ],
+    }
+    for i, soc in enumerate(unique_socs)
+]
+
+# Step 6: Update layout with dropdown
+fig.update_layout(
+    updatemenus=[{
+        "buttons": dropdown_buttons,
+        "direction": "down",
+        "showactive": True,
+        "x": 0.5,  # Center the dropdown horizontally
+        "y": 1.1,  # Move dropdown above the chart
+        "xanchor": "center",  # Anchor horizontally at center
+        "yanchor": "top"  # Anchor vertically at the top
+    }],
+    title=None,
+    xaxis_title="Number of job adverts",
+    yaxis_title="ITL1 Region",
+    width=1200,
+    height=800
+)
+
+fig.show()
 ```

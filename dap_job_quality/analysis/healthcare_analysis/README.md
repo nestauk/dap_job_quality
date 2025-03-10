@@ -4,6 +4,8 @@
 
 - Download the xlsx and save it to `dap_job_quality/analysis/healthcare_analysis/extendedsoc2020structureanddescriptionsexcel161020241.xlsx`.
 
+- Download the ITL1 shapefile from s3: [s3://open-jobs-lake/job_quality/health_social_care/ITL1.geojson](https://eu-west-1.console.aws.amazon.com/s3/object/open-jobs-lake?region=eu-west-1&bucketType=general&prefix=job_quality/health_social_care/ITL1.geojson).
+
 # Pipeline
 
 Step 1:
