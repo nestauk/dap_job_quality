@@ -1,0 +1,6 @@
+git+https://github.com/nestauk/dap_job_quality.git
+pandas
+metaflow
+boto3
+toolz
+nltk

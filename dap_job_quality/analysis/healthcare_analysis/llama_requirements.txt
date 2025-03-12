@@ -1,0 +1,4 @@
+ipykernel
+langchain
+langchain_community
+pandas

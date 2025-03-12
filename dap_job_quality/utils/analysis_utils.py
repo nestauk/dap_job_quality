@@ -4,6 +4,8 @@ import pandas as pd
 import re
 from typing import List, Dict, Union, Optional, Set
 
+from dap_job_quality.getters.keywords import get_keywords
+
 
 def create_wide_table(df):
     # Create a table with one row per ID, and a boolean column for each subcategory
@@ -114,15 +116,17 @@ def extract_salary_info(text: str) -> List[Dict[str, Union[float, str, np.float6
 
 # Define the keywords for permanent and temporary contracts
 permanent_keywords = r"\b(permanent|ongoing|long-term|long term|indefinite)\b"
-temporary_keywords = r"(contract will last from|temporary|fixed-term|fixed term|maternity|short-term|interim|seasonal|short and long term positions|short term positions|month contract|on a contract basis|contract position|contract period)"
+temporary_keywords = r"(contract will last from|contract until|temporary|fixed-term|fixed term|maternity|short-term|interim|seasonal|short and long term|short term|long and short term|month[s]? contract|on a contract basis|contract position|contract period|\d{1,2}[- ]?month placement|rolling contract|short[- ]?term contract|[cC]ontract\s+\d{1,2}\s+month|initial \d{1,2}[- ]?month|\d{1,2}[-\s+]?month\s+initial|contract length|block booking|contract\s+duration|duration\s+\d{1,2}\s+month|secondment)"
 apprenticeship_keywords = r"apprentice"
+zero_hours_keywords = r"\b(zero hour|zero-hour|zero hours|zero-hours|on call|casual contract|casual cover|bank staff|staff bank|bank work|bank basis)\b"
+zero_hours_exclusion = r"\b(no zero hours|no zero-hours)\b"
 
 
 def classify_contract_type(sentence: str):
     """
     Classifies the contract type based on keywords in the sentence.
     Returns 'Permanent' if permanent keywords are found,
-    'Temporary' if temporary keywords are found, otherwise 'Unknown'.
+    'Temporary' if temporary keywords are found, 'Zero Hours' if zero hours contract keywords are found, otherwise 'Unknown'.
 
     Search for 'Temporary' first because many jobs are temporary 'with the potential to become permanent'.
     """
@@ -132,6 +136,10 @@ def classify_contract_type(sentence: str):
         return "Apprenticeship"
     elif re.search(permanent_keywords, sentence, re.IGNORECASE):
         return "Permanent"
+    elif re.search(zero_hours_exclusion, sentence, re.IGNORECASE):
+        return "Unknown"  # Exclude cases like "no zero hours"
+    elif re.search(zero_hours_keywords, sentence, re.IGNORECASE):
+        return "Zero Hours"
     else:
         return "Unknown"
 
@@ -433,3 +441,61 @@ def calculate_hr_per_week_final(
     # If none of the above rules apply, return None
     else:
         return None
+
+
+# CONTRACT
+
+
+def determine_contract_type(types: List[str]):
+    if "Temporary" in types:
+        return "Temporary"
+    else:
+        # Count occurrences of each type
+        type_counts = pd.Series(types).value_counts()
+        most_common = type_counts.idxmax()
+        if len(type_counts) == 1:  # Only one unique type
+            return most_common
+        elif len(type_counts) > 1:
+            # If the list contains more than one type, we need to check the most common
+            if most_common == "Permanent" or most_common == "Unknown":
+                return most_common
+            else:
+                return "Unknown"  # Fallback to 'Unknown' if neither 'Temporary' nor most frequent matches
+        return "Unknown"
+
+
+# Other utils shared across AFS analysis and healthcare analysis
+
+
+def process_jq_data(processed_ads):
+    """
+    Merge the processed job adverts with the lookup table to get the subcategory and dimension of the target phrase.
+
+    Create a wide version of the data (dimensions_wide) with one row per job ID.
+    """
+
+    lookup = get_keywords()
+
+    processed_ads = processed_ads[
+        ["id", "sentences_split", "target_phrase"]
+    ].drop_duplicates()
+    processed_ads = pd.merge(
+        processed_ads,
+        lookup[["target_phrase", "subcategory", "dimension"]],
+        on="target_phrase",
+        how="left",
+    )
+    dimensions_wide = create_wide_table(processed_ads)
+
+    return processed_ads, dimensions_wide
+
+
+def merge_jq_data(afs_raw_sample, dimensions_wide):
+    """
+    Bring the metadata for the job ads together with the boolean job quality columns
+    """
+    afs_sample = pd.merge(afs_raw_sample, dimensions_wide, on="id", how="left")
+    columns_to_replace = dimensions_wide.columns[2:]  # the first column is the id
+    # These columns have NaN where there are *no* mentions of JQ dimensions in these job adverts
+    afs_sample[columns_to_replace] = afs_sample[columns_to_replace].fillna(0)
+    return afs_sample
