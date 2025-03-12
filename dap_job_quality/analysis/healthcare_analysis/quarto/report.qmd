@@ -166,7 +166,7 @@ According to a report by [nhsproviders.org](https://nhsproviders.org/media/69888
 
 Below, we will investigate the numbers of job adverts by SOC code and by year that mention flexible hours (e.g. part-time, compressed hours, job share) or flexible location (e.g. remote or hybrid working). Because many NHS roles are necessarily site-based, we focus primarily on flexible hours.
 
-The plot below shows the proportions of job adverts that mention flexible location (in blue) and flexible hours (in red) for each of the 4-digit SOC codes considered for this analysis.
+The plot below shows the proportions of job adverts that mention flexible location (in blue) and flexible hours (in red) for each of the 4-digit SOC codes considered for this analysis. You can click the plot legend to remove either "Flexible location" or "Flexible hours" and see just one dimension at a time more clearly.
 
 ```{python}
 #| label: fig-bar-flex_hours_flex_loc
@@ -198,7 +198,9 @@ grouped_bar(melted_soc, x="Proportion", y="soc_4_digit_name", colour="Flexibilit
 
 Among the 4-digit SOC groups with the highest proportions of adverts mentioning flexible hours are "Pharmaceutical technicians" (38%), "Registered mental health nurses" (34%), "Registered nurse practitioners" (32%), "Registered community nurses" (31%) and "Generalist medical practitioners"(31%). This compares to 29% in a random sample of jobs across various sectors in the years 2021--2023 (see our earlier report [Job Quality in England](https://public.flourish.studio/story/2552922/)).
 
-These are also some of the occupations facing the highest staff shortages at present: numbers of community nurses are estimated to have fallen by 7% since 2010 and numbers of mental health nurses are estimated to have fallen by 2% (https://www.nuffieldtrust.org.uk/resource/the-nhs-workforce-in-numbers), despite government pledges to increase the overall numbers of nurses. Similarly, the number of GPs fell between 2019 and 2022 (https://publications.parliament.uk/pa/cm5803/cmselect/cmhealth/115/report.html).
+These are also some of the occupations facing the highest staff shortages at present: numbers of community nurses are estimated to have fallen by 7% since 2010 and numbers of mental health nurses are estimated to have fallen by 2% ([https://www.nuffieldtrust.org.uk/resource/the-nhs-workforce-in-numbers](https://www.nuffieldtrust.org.uk/resource/the-nhs-workforce-in-numbers)), despite government pledges to increase the overall numbers of nurses. Similarly, the number of GPs fell between 2019 and 2022 ([https://publications.parliament.uk/pa/cm5803/cmselect/cmhealth/115/report.html](https://publications.parliament.uk/pa/cm5803/cmselect/cmhealth/115/report.html)).
+
+At the other end of the spectrum, in adverts for occupations grouped under "Clinical psychologists", "Other psychologists" and "Health services and public health managers and directors", around 12--15% mentioned flexible hours.
 
 We can also examine the change over time in rates of mentions of flexible hours or flexible location. The graph below shows the same information as above, but broken down by year. There is a separate plot for each 4-digit SOC code.
 
